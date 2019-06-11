@@ -1,0 +1,34 @@
+plugins {
+    id 'org.jenkins-ci.jpi' version '0.28.1'
+}
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+group = 'org.jenkins-ci.plugins'
+if (!project.hasProperty('SVNVERSION')) {
+  ext.SVNVERSION = '?'
+}
+version = "${new File('../../make/TICSVERSION').text.trim()}.${SVNVERSION}"
+
+jenkinsPlugin {
+    coreVersion = '1.557'
+    displayName = 'TICS Plugin'
+    url = 'http://www.tiobe.com'
+    shortName = 'tics'
+
+    developers {
+        developer {
+            id 'dreniers'
+            name 'Dennie Reniers'
+            email 'dennie.reniers@tiobe.com'
+        }
+    }
+}
+dependencies {
+    jenkinsPlugins group: 'org.jenkins-ci.plugins', name: 'credentials', version: '1.10'
+    implementation group: 'org.apache.httpcomponents', name: 'httpclient', 'version': '4.3.6'
+    implementation group: 'com.google.code.gson', name: 'gson', 'version': '2.3.1'
+    implementation group: 'joda-time', name: 'joda-time', 'version': '2.3'
+    implementation group: 'com.google.guava', name: 'guava', 'version': '14.0.1'
+}

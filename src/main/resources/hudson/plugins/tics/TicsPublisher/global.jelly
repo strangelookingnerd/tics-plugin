@@ -1,0 +1,13 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <f:section title="TICS Publisher">
+
+    <f:entry title="TICS Viewer URL" 
+        field="globalViewerUrl"
+      >
+      <f:textbox />
+    </f:entry>
+
+  </f:section>
+  
+</j:jelly>

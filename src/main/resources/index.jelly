@@ -1,0 +1,7 @@
+<!--
+  This view is used to render the plugin list page.
+-->
+<div>
+  This plugin from <a href="http://www.tiobe.com" target="_blank">TIOBE</a> adds a TICS analysis build step
+  for running TICSQServer and a post-build step that extracts TICS Quality Indicators from the TICS Viewer and publishes them in Jenkins.
+</div>

@@ -1,0 +1,13 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <l:layout>
+    <l:side-panel>
+      <l:tasks>
+        <l:task icon="images/24x24/up.gif" href=".." title="${%Back to Build}" />
+      </l:tasks>
+    </l:side-panel>
+  
+    <l:main-panel>
+      <st:include page="table.jelly" class="hudson.plugins.tics.TicsPublisher"/>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

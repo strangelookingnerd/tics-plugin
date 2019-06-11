@@ -1,0 +1,66 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <script src="${rootURL}/plugin/tics/analyzer.js"/>
+   
+  <f:block>
+    <div>
+      <p>
+        This build step executes TICSQServer to analyze your software archive and update the TICS Quality Database.
+        TICS must be available on the machine on which this job runs.
+        TICSQServer updates the Viewer automatically after it finishes.
+      </p>
+    </div>
+  </f:block>
+
+  <f:entry title="Build Server installation path" field="ticsPath">
+    <f:textbox/>
+  </f:entry>
+    
+  <f:entry title="TICS Configuration directory" field="ticsConfiguration">
+    <f:textbox/>
+  </f:entry>
+  
+  <f:entry title="Project name" field="projectName">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry title="Branch name" field="branchName">
+    <f:textbox/>
+  </f:entry>
+
+  <f:entry title="Branch directory" field="branchDirectory">
+    <f:textbox/>
+  </f:entry>
+
+  <f:section title="Advanced Options">
+    <f:advanced>
+      
+      <f:entry title="Environment variables" field="environmentVariables">
+        <f:textarea/>
+      </f:entry>
+    
+      <f:entry title="Output debug info (tmpdir)" field="createTmpdir">
+        <f:checkbox/>
+      </f:entry>
+      
+      <f:entry title="Tmpdir location" field="tmpdir">
+        <f:textbox/>
+      </f:entry>
+     
+      <f:entry title="Metrics to calculate (-calc)" field="calc">
+      </f:entry>
+
+      <f:property field="calc"/>
+    
+      <f:entry title="Metrics to recalculate (-recalc)" field="recalc">
+      </f:entry>
+
+      <f:property field="recalc"/>
+
+      <f:entry title="Extra arguments" field="extraArguments">
+        <f:textbox/>
+      </f:entry>
+      
+    </f:advanced>
+  </f:section>
+
+</j:jelly>

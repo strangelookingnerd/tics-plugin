@@ -1,0 +1,29 @@
+<?jelly escape-by-default='false'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" 
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local">
+         
+  <table style="width: 100%">
+    <tr>
+      <td rowspan="2" style="width: 76px; vertical-align: middle;">
+        <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
+      </td>
+      <td><b>Quality Indicators</b></td>
+    </tr>
+    <tr>
+      <td>
+        <a href="${it.openInViewerUrl}" target="_blank" title="Open in Viewer">${it.ticsPath == null ? '-' : it.ticsPath}</a>
+      </td>
+    </tr>
+  </table>
+         
+  <j:choose>
+    <j:when test="${it.tableHtml == null}">
+      No results available. TICS Quality Indicators will be collected during the next build. 
+    </j:when>
+    <j:otherwise>
+      ${it.tableHtml}
+      <div>Measured at ${it.measurementDate}</div>
+    </j:otherwise>
+  </j:choose>
+  
+</j:jelly>

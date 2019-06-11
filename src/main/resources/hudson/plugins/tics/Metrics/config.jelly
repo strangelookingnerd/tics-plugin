@@ -1,0 +1,88 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry>
+    <style type="text/css">
+      table.tics-table {
+        border-collapse: collapse;
+        border: 1px solid #CCC;
+      }
+      table.tics-table.table-striped tbody > tr:nth-child(odd) > td, .table-striped tbody > tr:nth-child(odd) > th 
+      {
+        background-color: #f9f9f9;
+      }
+      table.tics-table td {
+        padding: 5px;
+      }
+    </style>  
+    <table class="tics-table table-striped">
+      <tr>
+        <td>
+            <f:checkbox field="ALL" title="All" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+        <td>
+            <f:checkbox field="PREPARE" title="Prepare" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="FINALIZE" title="Finalize" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+        <td>
+            <f:checkbox field="CHANGEDFILES" title="ChangedFiles" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="BUILDRELATIONS" title="BuildRelations" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="INCLUDERELATIONS" title="IncludeRelations" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+        <td>
+        </td>
+      </tr>
+      <tr>
+        <td>
+            <f:checkbox field="TOTALTESTCOVERAGE" title="TotalTestCoverage" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="SYSTEMTESTCOVERAGE" title="SystemTestCoverage" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="INTEGRATIONTESTCOVERAGE" title="IntegrationTestCoverage" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="UNITTESTCOVERAGE" title="UnitTestCoverage" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="CODINGSTANDARD" title="CodingStandard" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="COMPILERWARNING" title="CompilerWarning" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ABSTRACTINTERPRETATION" title="AbstractInterpretation" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="AVGCYCLOMATICCOMPLEXITY" title="AvgCyclomaticComplexity" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="MAXCYCLOMATICCOMPLEXITY" title="MaxCyclomaticComplexity" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="FANOUT" title="FanOut" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="DEADCODE" title="DeadCode" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="DUPLICATEDCODE" title="DuplicatedCode" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+            <f:checkbox field="LOC" title="Loc" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ELOC" title="Eloc" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="GLOC" title="Gloc" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="CHANGERATE" title="ChangeRate" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="LINESADDED" title="LinesAdded" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="LINESDELETED" title="LinesDeleted" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="LINESCHANGED" title="LinesChanged" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="ACCUCHANGERATE" title="AccuChangeRate" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ACCULINESADDED" title="AccuLinesAdded" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ACCULINESDELETED" title="AccuLinesDeleted" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ACCULINESCHANGED" title="AccuLinesChanged" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+
+        <td>
+            <f:checkbox field="FIXRATE" title="FixRate" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="ACCUFIXRATE" title="AccuFixRate" onclick="onMetricsCheckboxClick()"/><br/>
+        </td>
+      </tr>
+    </table>
+  </f:entry>
+
+</j:jelly>
