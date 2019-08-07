@@ -7,7 +7,7 @@
 
 DAEMON := --no-daemon # to prevent using the Gradle Daemon in CI
 SVNVERSION := $(shell svn info . | sed -n "s/Last Changed Rev: //p")
-GRADLE := ./gradlew -PSVNVERSION="$(SVNVERSION)" $(DAEMON)
+GRADLE := $(CURDIR)/gradlew -PSVNVERSION="$(SVNVERSION)" $(DAEMON)
 TOOL := TICSJenkins
 
 all: build
