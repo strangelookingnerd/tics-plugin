@@ -3,7 +3,7 @@
 .SILENT:
 .SUFFIXES:
 
-.PHONY: all clean build clean server rebuild package relnotes clean_relnotes publish
+.PHONY: all check clean build clean server rebuild package relnotes clean_relnotes publish
 
 DAEMON := --no-daemon # to prevent using the Gradle Daemon in CI
 SVNVERSION := $(shell svn info . | sed -n "s/Last Changed Rev: //p")
@@ -14,6 +14,9 @@ all: build
 
 build:
 	$(GRADLE) jpi
+
+check:
+	$(GRADLETOOL) check -x test
 
 clean: clean_relnotes
 	$(GRADLE) clean

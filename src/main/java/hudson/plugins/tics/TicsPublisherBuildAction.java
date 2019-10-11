@@ -48,7 +48,7 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     }
 
     public String getMeasurementDate() {
-        if(Strings.isNullOrEmpty(measurementDate)) {
+        if (Strings.isNullOrEmpty(measurementDate)) {
             return "?";
         }
         return new Instant(measurementDate).toDateTime().toString("yyyy-MM-dd HH:mm");
@@ -69,14 +69,14 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     }
 
     public final String getOpenInViewerUrl() {
-        if(build == null) {
+        if (build == null) {
             return "";
         }
         final TicsPublisher publisher = getPublisher(build.getProject(), TicsPublisher.class);
-        if(publisher == null) {
+        if (publisher == null) {
             return "";
         }
-        String baseUrl;
+        final String baseUrl;
         try {
             baseUrl = publisher.getResolvedTiobewebBaseUrl();
         } catch (final InvalidTicsViewerUrl e) {

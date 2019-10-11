@@ -149,19 +149,21 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
     @Extension
     public static class DescriptorImpl extends Descriptor<Metrics> {
         @Override
-        public String getDisplayName() { return "Metrics"; }
+        public String getDisplayName() {
+            return "Metrics";
+        }
     }
 
     public ImmutableList<String> getEnabledMetrics() {
         final ImmutableList.Builder<String> out = ImmutableList.builder(); 
-        for(final Field f : this.getClass().getFields()) {
-            boolean enabled;
+        for (final Field f : this.getClass().getFields()) {
+            final boolean enabled;
             try {
                 enabled = (Boolean)f.get(this);
             } catch (final Exception e) {
                 throw Throwables.propagate(e);
             }
-            if(enabled) {
+            if (enabled) {
                 out.add(f.getName());
             }
         }

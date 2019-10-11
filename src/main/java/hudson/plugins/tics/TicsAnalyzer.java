@@ -25,7 +25,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
@@ -92,16 +91,16 @@ public class TicsAnalyzer extends Builder {
             final EnvVars buildEnv = build.getEnvironment(listener);
             int exitCode;
 
-            if(!Strings.isNullOrEmpty(branchDirectory)) {
+            if (!Strings.isNullOrEmpty(branchDirectory)) {
                 exitCode = setBranchDirUsingTicsMaintenance(build, launcher, listener, buildEnv);
-                if(exitCode != 0) {
+                if (exitCode != 0) {
                     logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
                     return false;
                 }
             }
             
             exitCode = launchTicsQServer(build, launcher, listener, buildEnv);
-            if(exitCode != 0) {
+            if (exitCode != 0) {
                 logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
                 return false;
             }
@@ -123,11 +122,11 @@ public class TicsAnalyzer extends Builder {
     /** Prefixes given command with location of TICS, if available */
     private String getFullyQualifiedPath(final String command) {
         String path = Objects.firstNonNull(ticsPath,"").trim();
-        if("".equals(path)) {
+        if ("".equals(path)) {
             return command;
         }
         // Note: we do not use new File(), because we do not want use the local FileSystem   
-        if(!path.endsWith("/") && !path.endsWith("\\")) {
+        if (!path.endsWith("/") && !path.endsWith("\\")) {
             path += "/";
         }
         return path + command; 
@@ -151,19 +150,19 @@ public class TicsAnalyzer extends Builder {
     int launchTicsQServer(final AbstractBuild<?,?> build, final Launcher launcher, final BuildListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
         final ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(getFullyQualifiedPath("TICSQServer"));
-        if(isNotEmpty(projectName)) {
+        if (isNotEmpty(projectName)) {
             args.add("-project");
             args.add(Util.replaceMacro(projectName, buildEnv));
         }
-        if(isNotEmpty(branchName)) {
+        if (isNotEmpty(branchName)) {
             args.add("-branchname");
             args.add(Util.replaceMacro(branchName, buildEnv));
         }
-        if(createTmpdir && isNotEmpty(tmpdir)) {
+        if (createTmpdir && isNotEmpty(tmpdir)) {
             args.add("-tmpdir");
             args.add(Util.replaceMacro(tmpdir.trim(), buildEnv));
         }
-        if(isNotEmpty(extraArguments)) {
+        if (isNotEmpty(extraArguments)) {
             args.addTokenized(Util.replaceMacro(extraArguments.trim(), buildEnv));
         }
         addMetrics(args, "-calc", calc);
@@ -179,9 +178,8 @@ public class TicsAnalyzer extends Builder {
     }
 
     void addMetrics(final ArgumentListBuilder args, final String key, final Metrics metrics) {
-        ImmutableList<String> names;
-        names = metrics.getEnabledMetrics();
-        if(!names.isEmpty()) {
+        final ImmutableList<String> names = metrics.getEnabledMetrics();
+        if (!names.isEmpty()) {
             args.add(key);
             args.add(Joiner.on(",").join(names));
         }
@@ -189,13 +187,13 @@ public class TicsAnalyzer extends Builder {
 
     Map<String, String> getEnvMap(final EnvVars buildEnv) {
         final Map<String, String> out = Maps.newLinkedHashMap();
-        if(isNotEmpty(ticsConfiguration)) {
+        if (isNotEmpty(ticsConfiguration)) {
             out.put("TICS", Util.replaceMacro(ticsConfiguration, buildEnv));
         }
         final ImmutableList<String> lines = ImmutableList.copyOf(Splitter.onPattern("\r?\n").split(Objects.firstNonNull(environmentVariables, "")));
-        for(final String line : lines) {
+        for (final String line : lines) {
             final ArrayList<String> splitted = Lists.newArrayList(Splitter.on("=").limit(2).split(line));
-            if(splitted.size() == 2) {
+            if (splitted.size() == 2) {
                 out.put(splitted.get(0).trim(), Util.replaceMacro(splitted.get(1).trim(), buildEnv));
             }
         }
@@ -231,21 +229,21 @@ public class TicsAnalyzer extends Builder {
         
 
         public FormValidation doCheckProjectName(@QueryParameter final String value) {
-            if("".equals(Strings.nullToEmpty(value).trim())) {
+            if ("".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a project name");
             }
             return FormValidation.ok();
         }
 
         public FormValidation doCheckBranchName(@QueryParameter final String value) {
-            if("".equals(Strings.nullToEmpty(value).trim())) {
+            if ("".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a branch name");
             }
             return FormValidation.ok();
         }
 
         public FormValidation doCheckTmpdir(@QueryParameter final String value, @QueryParameter final boolean createTmpdir) {
-            if(createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
+            if (createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a directory");
             }
             return FormValidation.ok();

@@ -25,11 +25,13 @@ public class TicsPublisherProjectAction extends AbstractTicsPublisherAction {
     public TicsPublisherBuildAction getLastBuild() {
         //System.out.println("getLastResult()");
         for (AbstractBuild<?, ?> b = project.getLastBuild(); b != null; b = b.getPreviousBuild()) {
-            if (b.isBuilding() || b.getResult() == Result.FAILURE || b.getResult() == Result.ABORTED)
+            if (b.isBuilding() || b.getResult() == Result.FAILURE || b.getResult() == Result.ABORTED) {
                 continue;
+            }
             final TicsPublisherBuildAction r = b.getAction(TicsPublisherBuildAction.class);
-            if (r != null)
+            if (r != null) {
                 return r;
+            }
         }
         return null;
     }

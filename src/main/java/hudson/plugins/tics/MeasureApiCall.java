@@ -72,7 +72,7 @@ public class MeasureApiCall {
 
     public void close() {
         try {
-            if(httpclient != null) {
+            if (httpclient != null) {
                 httpclient.close();
             }
         } catch (final IOException e) {
@@ -82,7 +82,7 @@ public class MeasureApiCall {
 
     private static CloseableHttpClient createHttpClient(final Optional<StandardUsernamePasswordCredentials> credentials) {
         HttpClientBuilder builder = HttpClients.custom();
-        if(credentials.isPresent()) {
+        if (credentials.isPresent()) {
             final String username = credentials.get().getUsername();
             final String password = credentials.get().getPassword().getPlainText();
             final CredentialsProvider credsProvider = new BasicCredentialsProvider();
@@ -106,11 +106,11 @@ public class MeasureApiCall {
         } catch (final URISyntaxException e) {
             throw new MeasureApiCallException("Invalid URL: " + e.getMessage());
         }
-        if(date.isPresent()) {
+        if (date.isPresent()) {
             final long seconds = date.get().getMillis() / 1000;
             builder = builder.setParameter("dates", ""+seconds);
         }
-        String url;
+        final String url;
         try {
             url = builder.build().toString();
         } catch (final URISyntaxException e) {
@@ -138,9 +138,9 @@ public class MeasureApiCall {
         }
         final int statusCode = response.getStatusLine().getStatusCode();
 
-        if(statusCode != HttpStatus.SC_OK) {
-            if(statusCode == HttpStatus.SC_UNAUTHORIZED) {
-                if(credentials.isPresent()) {
+        if (statusCode != HttpStatus.SC_OK) {
+            if (statusCode == HttpStatus.SC_UNAUTHORIZED) {
+                if (credentials.isPresent()) {
                     IOUtils.closeQuietly(response);
                     throw new MeasureApiCallException("401 Unauthorized - Invalid username/password combination");
                 } else {
@@ -151,7 +151,7 @@ public class MeasureApiCall {
 
             final Optional<String> formattedError = tryExtractExceptionMessageFromBody(body);
             final String reason = response.getStatusLine().getReasonPhrase();
-            if(formattedError.isPresent()) {
+            if (formattedError.isPresent()) {
                 IOUtils.closeQuietly(response);
                 throw new MeasureApiCallException(statusCode + " " + reason + " - " + formattedError.get());
             } else {
@@ -173,7 +173,7 @@ public class MeasureApiCall {
 
 
     private Optional<String> tryExtractExceptionMessageFromBody(final String body) {
-        if(body.startsWith("{")) {
+        if (body.startsWith("{")) {
             // body is Json
             final MeasureApiErrorResponse out;
             try {
@@ -181,7 +181,7 @@ public class MeasureApiCall {
             } catch(final Exception ex) {
                 return Optional.absent();
             }
-            if(out == null || out.alertMessages.size() == 0) {
+            if (out == null || out.alertMessages.size() == 0) {
                 return Optional.absent();
             }
             final AlertMessage am0 = out.alertMessages.get(0);
@@ -191,7 +191,7 @@ public class MeasureApiCall {
 
         // Body is html. Happens e.g. in case non-existing section is provided
         final Matcher matcher = Pattern.compile("Exception: ([^\n]+)").matcher(body);
-        if(matcher.find()) {
+        if (matcher.find()) {
             return Optional.of(matcher.group(1));
         }
 

@@ -103,7 +103,7 @@ public class TicsPublisher extends Recorder {
         final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(build.getProject(), credentialsId);
         final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(ticsPath), "Path not specified"), build.getEnvironment(listener));
 
-        String measureApiUrl;
+        final String measureApiUrl;
         try {
             measureApiUrl = getResolvedTiobewebBaseUrl() + "/api/public/v1/Measure";
         } catch (final InvalidTicsViewerUrl ex) {
@@ -136,13 +136,13 @@ public class TicsPublisher extends Recorder {
 
 
     static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final AbstractProject<?, ?> project, final String credentialsId) {
-        if(Strings.isNullOrEmpty(credentialsId)) {
+        if (Strings.isNullOrEmpty(credentialsId)) {
             return Optional.absent();
         }
         final List<DomainRequirement> domainRequirements = Collections.<DomainRequirement>emptyList();
         final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, project, ACL.SYSTEM, domainRequirements);
-        for(final StandardUsernamePasswordCredentials c : list) {
-            if(credentialsId.equals(c.getId())) {
+        for (final StandardUsernamePasswordCredentials c : list) {
+            if (credentialsId.equals(c.getId())) {
                 return Optional.of(c);
             }
         }
@@ -194,7 +194,7 @@ public class TicsPublisher extends Recorder {
 
         /** Helper method to check whether URL points to a TICS Viewer, in which case it returns Optional.absent(). */
         private static Optional<FormValidation> checkViewerUrlForErrorsCommon(final String url) {
-            if(Strings.isNullOrEmpty(url)) {
+            if (Strings.isNullOrEmpty(url)) {
                 return Optional.of(FormValidation.error("Field is required"));
             }
             if (!url.matches("[^:/]+://[^/]+/[^/]+/[^/]+/?")) {
@@ -213,35 +213,35 @@ public class TicsPublisher extends Recorder {
             } catch (final InvalidTicsViewerUrl e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
             } finally {
-                if(apiCall != null) {
+                if (apiCall != null) {
                     apiCall.close();
                 }
             }
         }
 
         private static Optional<FormValidation> checkViewerUrlForWarningsCommon(final String value) {
-            String host;
+            final String host;
             try {
                 host = new URIBuilder(value).getHost();
             } catch (final URISyntaxException e) {
                 return Optional.absent();
             }
-            if(host.equals("localhost") || host.equals("127.0.0.1")) {
+            if (host.equals("localhost") || host.equals("127.0.0.1")) {
                 return Optional.of(FormValidation.warning("Please provide a publicly accessible host, instead of " + host));
             }
             return Optional.absent();
         }
 
         private FormValidation checkViewerUrlForErrorsOrWarnings(final String value) {
-            if(Strings.isNullOrEmpty(value)) {
+            if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.ok();
             }
             Optional<FormValidation> validation = checkViewerUrlForErrorsCommon(value);
-            if(validation.isPresent()) {
+            if (validation.isPresent()) {
                 return validation.get();
             }
             validation = checkViewerUrlForWarningsCommon(value);
-            if(validation.isPresent()) {
+            if (validation.isPresent()) {
                 return validation.get();
             }
             return FormValidation.ok();
@@ -281,15 +281,15 @@ public class TicsPublisher extends Recorder {
 
 
         public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, ServletException, InterruptedException {
-            if(Strings.isNullOrEmpty(value)) {
+            if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Field is required");
             }
-            if(!value.matches("^[^:/]+://[^/]+/.+$")) {
+            if (!value.matches("^[^:/]+://[^/]+/.+$")) {
                 return FormValidation.errorWithMarkup("Path should start with <code>hierarchy://project/branch</code>, where <code>hierarchy</code> is either <code>HIE</code> or <code>ORG</code>.");
             }
 
             final String resolvedViewerUrl = Optional.fromNullable(Strings.emptyToNull(viewerUrl)).or(Strings.nullToEmpty(globalViewerUrl));
-            if(checkViewerUrlForErrorsCommon(resolvedViewerUrl).isPresent()) {
+            if (checkViewerUrlForErrorsCommon(resolvedViewerUrl).isPresent()) {
                 // if an error is present for the URL, do not validate any further
                 return FormValidation.ok();
             }
@@ -308,7 +308,7 @@ public class TicsPublisher extends Recorder {
             } catch (final InvalidTicsViewerUrl e) {
                 return FormValidation.errorWithMarkup(e.getMessage());
             } finally {
-                if(apiCall != null) {
+                if (apiCall != null) {
                     apiCall.close();
                 }
             }
@@ -334,7 +334,7 @@ public class TicsPublisher extends Recorder {
         }
 
         public ListBoxModel fillCredentialsIdItems(@Nonnull final Item context, final String remote) {
-            List<DomainRequirement> domainRequirements;
+            final List<DomainRequirement> domainRequirements;
             if (remote == null) {
                 domainRequirements = Collections.<DomainRequirement>emptyList();
             } else {
@@ -369,10 +369,10 @@ public class TicsPublisher extends Recorder {
      * @throws InvalidTicsViewerUrl */
     public String getResolvedTiobewebBaseUrl() throws InvalidTicsViewerUrl {
         Optional<String> optUrl = Optional.fromNullable(Strings.emptyToNull(getViewerUrl()));
-        if(!optUrl.isPresent()) {
+        if (!optUrl.isPresent()) {
             optUrl = Optional.fromNullable(Strings.emptyToNull(getDescriptor().getViewerUrl()));
         }
-        if(!optUrl.isPresent()) {
+        if (!optUrl.isPresent()) {
             throw new InvalidTicsViewerUrl("TICS Viewer URL was not configured at project level or globally.");
         }
         return getTiobewebBaseUrlFromGivenUrl(optUrl.get());
@@ -383,10 +383,10 @@ public class TicsPublisher extends Recorder {
         final String url = StringUtils.stripEnd(arg0, "/");
 
         final ArrayList<String> parts = Lists.newArrayList(Splitter.on("/").split(url));
-        if(parts.size() < 3) {
+        if (parts.size() < 3) {
             throw new InvalidTicsViewerUrl("Missing host name in TICS Viewer URL");
         }
-        if(parts.size() < 5) {
+        if (parts.size() < 5) {
             throw new InvalidTicsViewerUrl("Missing section name in TICS Viewer URL");
         }
         parts.set(3, "tiobeweb"); // change TIOBEPortal to tiobeweb

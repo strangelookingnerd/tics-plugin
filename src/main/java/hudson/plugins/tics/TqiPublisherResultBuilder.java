@@ -65,7 +65,7 @@ public class TqiPublisherResultBuilder {
 
 
     public void close() {
-        if(measureApiCall != null) {
+        if (measureApiCall != null) {
             measureApiCall.close();
         }
     }
@@ -110,11 +110,11 @@ public class TqiPublisherResultBuilder {
         th = th.attr("style", "cursor: help");
         sb.append(th.attr("title", "Last TICS run was at\n" + getLastRunDate().or(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime())).openClose("Current"));
         sb.append("<th style=\"width: 26px\"><!-- Letter --></th>");
-        if(mvsPrevious.isPresent()) {
+        if (mvsPrevious.isPresent()) {
             final String title = "Delta with previous TICS run at\n" + getPreviousRunDate().or(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime());
             sb.append(th.attr("title", title).openClose("&Delta;Previous"));
         }
-        if(mvsBaseline.isPresent() && baseline.get().isPresent()) {
+        if (mvsBaseline.isPresent() && baseline.get().isPresent()) {
             final Baseline bl = baseline.get().get();
             final String title = "Delta with baseline '" + bl.getName() + "' at\n" + bl.getStarted().toDateTime().toString(DateTimeFormat.longDateTime());
             sb.append(th.attr("title", title).open());
@@ -132,7 +132,7 @@ public class TqiPublisherResultBuilder {
         sb.append("</thead>");
         sb.append("<tbody>");
         final MetricValue<Double> EMPTY_METRICVALUE = new MetricValue<Double>();
-        for(int i=0; i<mvsCurrent.data.size(); i++) {
+        for (int i=0; i<mvsCurrent.data.size(); i++) {
             final Metric metric = mvsCurrent.metrics.get(i);
             final MetricValue<Double> mvNow = Iterables.get(mvsCurrent.data, i, EMPTY_METRICVALUE);
             final HtmlTag tr = HtmlTag.from("tr")
@@ -150,10 +150,10 @@ public class TqiPublisherResultBuilder {
             // Output current value
             td = td.attr("style", "text-align: right");
             sb.append(td.open());
-            if(mvNow.value == null) {
+            if (mvNow.value == null) {
                 sb.append("-");
             } else {
-                if(isPercentageMetric(metric)) {
+                if (isPercentageMetric(metric)) {
                     sb.append(percentageFormatter.format(mvNow.value));
                     sb.append("%");
                 } else {
@@ -168,11 +168,11 @@ public class TqiPublisherResultBuilder {
             sb.append(getLetterToBadge(mvNow.letter));
             sb.append(td.close());
 
-            if(mvsPrevious.isPresent()) {
+            if (mvsPrevious.isPresent()) {
                 outputDeltaCell(sb, td, metric, mvNow.value, Iterables.get(mvsPrevious.get().data, i, EMPTY_METRICVALUE).value);
             }
 
-            if(mvsBaseline.isPresent()) {
+            if (mvsBaseline.isPresent()) {
                 outputDeltaCell(sb, td, metric, mvNow.value, Iterables.get(mvsBaseline.get().data, i, EMPTY_METRICVALUE).value);
             }
 
@@ -184,7 +184,7 @@ public class TqiPublisherResultBuilder {
     }
 
     private boolean doesTqiVersionIncludeSecurity() {
-        MeasureApiSuccessResponse<TqiVersion> resp;
+        final MeasureApiSuccessResponse<TqiVersion> resp;
         try {
             resp = measureApiCall.execute(MeasureApiCall.RESPONSE_TQIVERSION_TYPETOKEN, ticsPath, TQI_VERSION);
         } catch (final MeasureApiCallException e) {
@@ -200,7 +200,7 @@ public class TqiPublisherResultBuilder {
 
 
     private String getLetterToBadge(final String letter) {
-        if(Strings.isNullOrEmpty(letter)) {
+        if (Strings.isNullOrEmpty(letter)) {
             return "";
         }
         final ImmutableMap<String, String> tqiBgColors = ImmutableMap.<String, String>builder()
@@ -222,7 +222,7 @@ public class TqiPublisherResultBuilder {
 
         final String bgColor = tqiBgColors.get(letter);
         final String fgColor = tqiFgColors.get(letter);
-        if(bgColor == null || fgColor == null) {
+        if (bgColor == null || fgColor == null) {
             return "";
         }
 
@@ -239,13 +239,13 @@ public class TqiPublisherResultBuilder {
 
 
     private void outputDeltaCell(final StringBuilder sb, final HtmlTag td0, final Metric metric, final Double now, final Double prev) {
-        if(now == null || prev == null) {
+        if (now == null || prev == null) {
             sb.append("-");
             return;
         }
-        BigDecimal delta;
+        final BigDecimal delta;
         final String deltaAsText;
-        if(isPercentageMetric(metric)) {
+        if (isPercentageMetric(metric)) {
             final double diff = now.doubleValue() - prev.doubleValue();
             delta = new BigDecimal(diff).setScale(2, RoundingMode.UP);
             deltaAsText = delta.toPlainString();
@@ -256,15 +256,15 @@ public class TqiPublisherResultBuilder {
         }
 
         HtmlTag td = td0.attr("style", "text-align: right");
-        if(metric.getExpression().startsWith("tqi") && delta.signum() != 0) {
+        if (metric.getExpression().startsWith("tqi") && delta.signum() != 0) {
             td = td.attr("style", "color: " + (delta.signum() > 0 ? "green" : "red"));
         }
 
         sb.append(td.open());
-        if(delta.signum() > 0) {
+        if (delta.signum() > 0) {
             sb.append("+");
         }
-        if(delta.signum() == 0) {
+        if (delta.signum() == 0) {
             sb.append("<span style=\"color: #BBB\">0.00</span>");
         } else {
             sb.append(deltaAsText);
@@ -289,14 +289,14 @@ public class TqiPublisherResultBuilder {
 
     private final Supplier<Optional<List<Run>>> runDates = Suppliers.memoize(new Supplier<Optional<List<Run>>>() {
         public Optional<List<Run>> get() {
-            MeasureApiSuccessResponse<List<Run>> resp;
+            final MeasureApiSuccessResponse<List<Run>> resp;
             try {
                 resp = measureApiCall.execute(MeasureApiCall.RESPONSE_RUNS_TYPETOKEN, ticsPath, "runs", Optional.<Instant>absent());
             } catch (final MeasureApiCallException e) {
                 e.printStackTrace(logger);
                 return Optional.absent();
             }
-            if(resp.data.isEmpty()) {
+            if (resp.data.isEmpty()) {
                 return Optional.absent();
             }
             final MetricValue<List<Run>> mv = resp.data.get(0);
@@ -306,7 +306,7 @@ public class TqiPublisherResultBuilder {
 
     private final Optional<Instant> getLastRunDate() {
         final List<Run> runs = runDates.get().or(ImmutableList.<Run>of());
-        if(runs.isEmpty()) {
+        if (runs.isEmpty()) {
             return Optional.absent();
         }
 
@@ -316,7 +316,7 @@ public class TqiPublisherResultBuilder {
 
     private final Optional<Instant> getPreviousRunDate() {
         final List<Run> runs = runDates.get().or(ImmutableList.<Run>of());
-        if(runs.size() <= 1) {
+        if (runs.size() <= 1) {
             return Optional.absent();
         }
         final Run run = runs.get(runs.size()-2);
@@ -325,19 +325,19 @@ public class TqiPublisherResultBuilder {
 
     private final Supplier<Optional<Baseline>> baseline = Suppliers.memoize(new Supplier<Optional<Baseline>>() {
         public Optional<Baseline> get() {
-            MeasureApiSuccessResponse<List<Baseline>> resp;
+            final MeasureApiSuccessResponse<List<Baseline>> resp;
             try {
                 resp = measureApiCall.execute(MeasureApiCall.RESPONSE_BASELINES_TYPETOKEN, ticsPath, "baselines", Optional.<Instant>absent());
             } catch (final MeasureApiCallException e) {
                 e.printStackTrace(logger);
                 return Optional.absent();
             }
-            if(resp.data.isEmpty()) {
+            if (resp.data.isEmpty()) {
                 return Optional.absent();
             }
             final MetricValue<List<Baseline>> mv = resp.data.get(0);
             final List<Baseline> baselines = mv.value;
-            if(baselines.isEmpty()) {
+            if (baselines.isEmpty()) {
                 return Optional.absent();
             }
             return Optional.of(baselines.get(baselines.size()-1));

@@ -32,7 +32,7 @@ public class HtmlTag {
     }
 
     public HtmlTag attrIf(final boolean state, final String key, final String value) {
-        if(state) {
+        if (state) {
             return attr(key, value);
         } else {
             return this;
@@ -43,13 +43,13 @@ public class HtmlTag {
         final StringBuilder sb = new StringBuilder();
         sb.append("<");
         sb.append(this.tag);
-        if(attrs != null) {
-            for(final Entry<String, Collection<String>> entry : attrs.asMap().entrySet()) {
+        if (attrs != null) {
+            for (final Entry<String, Collection<String>> entry : attrs.asMap().entrySet()) {
                 sb.append(" ");
-                String valueSeparator;
-                if("style".equals(entry.getKey())) {
+                final String valueSeparator;
+                if ("style".equals(entry.getKey())) {
                     valueSeparator = "; ";
-                } else if("data-bind".equals(entry.getKey())) {
+                } else if ("data-bind".equals(entry.getKey())) {
                     valueSeparator = ", ";
                 } else {
                     valueSeparator = " ";
