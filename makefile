@@ -43,7 +43,7 @@ endif
 clean_relnotes:
 	rm -f $(TOOL)-relnotes.html
 
-DEST=imposter:/var/home/wilde/ticsweb/pub/plugins/jenkins
+DEST=absolem:/home/wilde/ticsweb/pub/plugins/jenkins
 
 publish: package relnotes
 	scp build/libs/tics.hpi $(DEST)/$(TOOL)-$(TICSVERSION).$(SVNVERSION).hpi
