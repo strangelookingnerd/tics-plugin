@@ -41,6 +41,7 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
     public final boolean LOC;
     public final boolean MAXCYCLOMATICCOMPLEXITY;
     public final boolean PREPARE;
+    public final boolean SECURITY;
     public final boolean SYSTEMTESTCOVERAGE;
     public final boolean TOTALTESTCOVERAGE;
     public final boolean UNITTESTCOVERAGE;
@@ -74,6 +75,7 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
             , final boolean LOC
             , final boolean MAXCYCLOMATICCOMPLEXITY
             , final boolean PREPARE
+            , final boolean SECURITY
             , final boolean SYSTEMTESTCOVERAGE
             , final boolean TOTALTESTCOVERAGE
             , final boolean UNITTESTCOVERAGE
@@ -106,6 +108,7 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
         this.LOC = LOC;
         this.MAXCYCLOMATICCOMPLEXITY = MAXCYCLOMATICCOMPLEXITY;
         this.PREPARE = PREPARE;
+        this.SECURITY = SECURITY;
         this.SYSTEMTESTCOVERAGE = SYSTEMTESTCOVERAGE;
         this.TOTALTESTCOVERAGE = TOTALTESTCOVERAGE;
         this.UNITTESTCOVERAGE = UNITTESTCOVERAGE;
@@ -142,8 +145,9 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
                 false,
                 false,
                 false,
-                false                
-                );
+                false,
+                false
+        );
     }
 
     @Extension

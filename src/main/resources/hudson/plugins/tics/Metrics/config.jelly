@@ -42,6 +42,7 @@
             <f:checkbox field="CODINGSTANDARD" title="CodingStandard" onclick="onMetricsCheckboxClick()"/><br/>
             <f:checkbox field="COMPILERWARNING" title="CompilerWarning" onclick="onMetricsCheckboxClick()"/><br/>
             <f:checkbox field="ABSTRACTINTERPRETATION" title="AbstractInterpretation" onclick="onMetricsCheckboxClick()"/><br/>
+            <f:checkbox field="SECURITY" title="Security" onclick="onMetricsCheckboxClick()"/><br/>
         </td>
 
         <td>
