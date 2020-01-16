@@ -7,12 +7,12 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -83,7 +83,7 @@ public class TqiPublisherResultBuilder {
                     + "<blockquote>" + msg + "</blockquote>"
                     + "Consult the console output for more information."
                     + "</div>";
-
+            throw new RuntimeException("Could not publish the TICS results.", ex);
         }
         return new TqiPublisherResult(tableHtml, ticsPath);
     }
@@ -93,8 +93,8 @@ public class TqiPublisherResultBuilder {
         final boolean hasSecurity = doesTqiVersionIncludeSecurity();
         final String metrics = hasSecurity ? METRICS_4_0 : METRICS_3_11;
         final MeasureApiSuccessResponse<Double> mvsCurrent = measureApiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, ticsPath, metrics);
-        final Optional<MeasureApiSuccessResponse<Double>> mvsPrevious = getPreviousRunDate().isPresent() ? tryQueryMetricsForDate(getPreviousRunDate().get(), metrics) : Optional.<MeasureApiSuccessResponse<Double>>absent();
-        final Optional<MeasureApiSuccessResponse<Double>> mvsBaseline = baseline.get().isPresent() ? tryQueryMetricsForDate(baseline.get().get().getStarted(), metrics) : Optional.<MeasureApiSuccessResponse<Double>>absent();
+        final Optional<MeasureApiSuccessResponse<Double>> mvsPrevious = getPreviousRunDate().isPresent() ? tryQueryMetricsForDate(getPreviousRunDate().get(), metrics) : Optional.<MeasureApiSuccessResponse<Double>>empty();
+        final Optional<MeasureApiSuccessResponse<Double>> mvsBaseline = baseline.get().isPresent() ? tryQueryMetricsForDate(baseline.get().get().getStarted(), metrics) : Optional.<MeasureApiSuccessResponse<Double>>empty();
 
         final StringBuilder sb = new StringBuilder();
         final HtmlTag table = HtmlTag.from("table")
@@ -108,10 +108,10 @@ public class TqiPublisherResultBuilder {
                 .attr("style", "text-align: right")
                 .attr("style", "width: 80px");
         th = th.attr("style", "cursor: help");
-        sb.append(th.attr("title", "Last TICS run was at\n" + getLastRunDate().or(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime())).openClose("Current"));
+        sb.append(th.attr("title", "Last TICS run was at\n" + getLastRunDate().orElse(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime())).openClose("Current"));
         sb.append("<th style=\"width: 26px\"><!-- Letter --></th>");
         if (mvsPrevious.isPresent()) {
-            final String title = "Delta with previous TICS run at\n" + getPreviousRunDate().or(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime());
+            final String title = "Delta with previous TICS run at\n" + getPreviousRunDate().orElse(Instant.now()).toDateTime().toString(DateTimeFormat.longDateTime());
             sb.append(th.attr("title", title).openClose("&Delta;Previous"));
         }
         if (mvsBaseline.isPresent() && baseline.get().isPresent()) {
@@ -282,7 +282,7 @@ public class TqiPublisherResultBuilder {
             return Optional.of(measureApiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, ticsPath, metrics, Optional.of(date)));
         } catch (final MeasureApiCallException e) {
             e.printStackTrace(logger);
-            return Optional.absent();
+            return Optional.empty();
         }
     }
 
@@ -291,13 +291,13 @@ public class TqiPublisherResultBuilder {
         public Optional<List<Run>> get() {
             final MeasureApiSuccessResponse<List<Run>> resp;
             try {
-                resp = measureApiCall.execute(MeasureApiCall.RESPONSE_RUNS_TYPETOKEN, ticsPath, "runs", Optional.<Instant>absent());
+                resp = measureApiCall.execute(MeasureApiCall.RESPONSE_RUNS_TYPETOKEN, ticsPath, "runs", Optional.empty());
             } catch (final MeasureApiCallException e) {
                 e.printStackTrace(logger);
-                return Optional.absent();
+                return Optional.empty();
             }
             if (resp.data.isEmpty()) {
-                return Optional.absent();
+                return Optional.empty();
             }
             final MetricValue<List<Run>> mv = resp.data.get(0);
             return Optional.of(mv.value);
@@ -305,9 +305,9 @@ public class TqiPublisherResultBuilder {
     });
 
     private final Optional<Instant> getLastRunDate() {
-        final List<Run> runs = runDates.get().or(ImmutableList.<Run>of());
+        final List<Run> runs = runDates.get().orElse(ImmutableList.<Run>of());
         if (runs.isEmpty()) {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         final Run run = runs.get(runs.size()-1);
@@ -315,9 +315,9 @@ public class TqiPublisherResultBuilder {
     }
 
     private final Optional<Instant> getPreviousRunDate() {
-        final List<Run> runs = runDates.get().or(ImmutableList.<Run>of());
+        final List<Run> runs = runDates.get().orElse(ImmutableList.<Run>of());
         if (runs.size() <= 1) {
-            return Optional.absent();
+            return Optional.empty();
         }
         final Run run = runs.get(runs.size()-2);
         return Optional.of(run.getStarted());
@@ -327,18 +327,18 @@ public class TqiPublisherResultBuilder {
         public Optional<Baseline> get() {
             final MeasureApiSuccessResponse<List<Baseline>> resp;
             try {
-                resp = measureApiCall.execute(MeasureApiCall.RESPONSE_BASELINES_TYPETOKEN, ticsPath, "baselines", Optional.<Instant>absent());
+                resp = measureApiCall.execute(MeasureApiCall.RESPONSE_BASELINES_TYPETOKEN, ticsPath, "baselines", Optional.empty());
             } catch (final MeasureApiCallException e) {
                 e.printStackTrace(logger);
-                return Optional.absent();
+                return Optional.empty();
             }
             if (resp.data.isEmpty()) {
-                return Optional.absent();
+                return Optional.empty();
             }
             final MetricValue<List<Baseline>> mv = resp.data.get(0);
             final List<Baseline> baselines = mv.value;
             if (baselines.isEmpty()) {
-                return Optional.absent();
+                return Optional.empty();
             }
             return Optional.of(baselines.get(baselines.size()-1));
         }

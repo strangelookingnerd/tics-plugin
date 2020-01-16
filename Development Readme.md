@@ -34,6 +34,7 @@ Gradle-specific information
 - Building the tics.hpi file can be done using the 'jpi' task
 - Starting a local Jetty server can be done using the 'server' task
 - The server task appears to hang at 83%, but it's actually running a server at port 8080 on localhost!
+- For faster debugging start the server with the following command: 'gradlew -Dstapler.trace=false -Dstapler.jelly.noCache=false -Ddebug.YUI=false server'
 - Updating the version of the plugin is done automatically
 
 

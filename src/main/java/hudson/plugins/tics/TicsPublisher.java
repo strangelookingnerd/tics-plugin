@@ -5,13 +5,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -28,7 +26,6 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -37,14 +34,15 @@ import com.google.common.collect.Lists;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Action;
-import hudson.model.BuildListener;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.TqiPublisherResultBuilder.TqiPublisherResult;
 import hudson.security.ACL;
@@ -54,9 +52,10 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 
-public class TicsPublisher extends Recorder {
+public class TicsPublisher extends Recorder implements SimpleBuildStep {
     static final String LOGGING_PREFIX = "[TICS Publisher] ";
     private final String ticsPath;
     private final String viewerUrl;
@@ -99,16 +98,16 @@ public class TicsPublisher extends Recorder {
     }
 
     @Override
-    public boolean perform(final AbstractBuild<?, ?> build, final Launcher launcher, final BuildListener listener) throws IOException, InterruptedException {
-        final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(build.getProject(), credentialsId);
-        final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(ticsPath), "Path not specified"), build.getEnvironment(listener));
+    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
+        final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), credentialsId);
+        final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(ticsPath), "Path not specified"), run.getEnvironment(listener));
 
         final String measureApiUrl;
         try {
             measureApiUrl = getResolvedTiobewebBaseUrl() + "/api/public/v1/Measure";
         } catch (final InvalidTicsViewerUrl ex) {
             ex.printStackTrace(listener.getLogger());
-            return false;
+            throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
         }
 
         final TqiPublisherResultBuilder builder = new TqiPublisherResultBuilder(
@@ -117,46 +116,38 @@ public class TicsPublisher extends Recorder {
                 measureApiUrl,
                 ticsPath1);
 
-        final TqiPublisherResult result;
+        TqiPublisherResult result;
         try {
             result = builder.run();
         } catch (final Exception e) {
             listener.getLogger().println(LOGGING_PREFIX + e.getMessage());
             listener.getLogger().println(Throwables.getStackTraceAsString(e));
-            return false;
+            result = null;
         } finally {
             builder.close();
         }
 
-        build.addAction(new TicsPublisherBuildAction(build, result));
-        build.setResult(Result.SUCCESS); // always succeed
-
-        return true;
+        run.addAction(new TicsPublisherBuildAction(run, result));
+        run.setResult(Result.SUCCESS); // always succeed
     }
 
 
-    static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final AbstractProject<?, ?> project, final String credentialsId) {
+    static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final Job<?, ?> job, final String credentialsId) {
         if (Strings.isNullOrEmpty(credentialsId)) {
-            return Optional.absent();
+            return Optional.empty();
         }
         final List<DomainRequirement> domainRequirements = Collections.<DomainRequirement>emptyList();
-        final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, project, ACL.SYSTEM, domainRequirements);
+        final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, job, ACL.SYSTEM, domainRequirements);
         for (final StandardUsernamePasswordCredentials c : list) {
             if (credentialsId.equals(c.getId())) {
                 return Optional.of(c);
             }
         }
-        return Optional.absent();
+        return Optional.empty();
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
-    }
-
-    /** Note that this method is called only once by Hudson */
-    @Override
-    public Collection<? extends Action> getProjectActions(final AbstractProject<?, ?> project) {
-        return Arrays.asList(new TicsPublisherProjectAction(project));
     }
 
     /**
@@ -205,9 +196,9 @@ public class TicsPublisher extends Recorder {
             try {
                 final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(url));
                 final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream());
-                apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.<StandardUsernamePasswordCredentials>absent());
+                apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.empty());
                 apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, "HIE://", "none");
-                return Optional.absent();
+                return Optional.empty();
             } catch (final MeasureApiCallException e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
             } catch (final InvalidTicsViewerUrl e) {
@@ -224,12 +215,12 @@ public class TicsPublisher extends Recorder {
             try {
                 host = new URIBuilder(value).getHost();
             } catch (final URISyntaxException e) {
-                return Optional.absent();
+                return Optional.empty();
             }
             if (host.equals("localhost") || host.equals("127.0.0.1")) {
                 return Optional.of(FormValidation.warning("Please provide a publicly accessible host, instead of " + host));
             }
-            return Optional.absent();
+            return Optional.empty();
         }
 
         private FormValidation checkViewerUrlForErrorsOrWarnings(final String value) {
@@ -280,7 +271,7 @@ public class TicsPublisher extends Recorder {
         }
 
 
-        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, ServletException, InterruptedException {
+        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException,  InterruptedException {
             if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Field is required");
             }
@@ -288,7 +279,7 @@ public class TicsPublisher extends Recorder {
                 return FormValidation.errorWithMarkup("Path should start with <code>hierarchy://project/branch</code>, where <code>hierarchy</code> is either <code>HIE</code> or <code>ORG</code>.");
             }
 
-            final String resolvedViewerUrl = Optional.fromNullable(Strings.emptyToNull(viewerUrl)).or(Strings.nullToEmpty(globalViewerUrl));
+            final String resolvedViewerUrl = Optional.ofNullable(Strings.emptyToNull(viewerUrl)).orElse(Strings.nullToEmpty(globalViewerUrl));
             if (checkViewerUrlForErrorsCommon(resolvedViewerUrl).isPresent()) {
                 // if an error is present for the URL, do not validate any further
                 return FormValidation.ok();
@@ -368,9 +359,9 @@ public class TicsPublisher extends Recorder {
      * Example: "http://192.168.1.88:42506/tiobeweb/default"
      * @throws InvalidTicsViewerUrl */
     public String getResolvedTiobewebBaseUrl() throws InvalidTicsViewerUrl {
-        Optional<String> optUrl = Optional.fromNullable(Strings.emptyToNull(getViewerUrl()));
+        Optional<String> optUrl = Optional.ofNullable(Strings.emptyToNull(getViewerUrl()));
         if (!optUrl.isPresent()) {
-            optUrl = Optional.fromNullable(Strings.emptyToNull(getDescriptor().getViewerUrl()));
+            optUrl = Optional.ofNullable(Strings.emptyToNull(getDescriptor().getViewerUrl()));
         }
         if (!optUrl.isPresent()) {
             throw new InvalidTicsViewerUrl("TICS Viewer URL was not configured at project level or globally.");

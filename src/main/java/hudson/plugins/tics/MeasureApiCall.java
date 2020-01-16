@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,7 +25,6 @@ import org.apache.http.util.EntityUtils;
 import org.joda.time.Instant;
 
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -94,7 +94,7 @@ public class MeasureApiCall {
 
 
     public <T> T execute(final TypeToken<T> typeToken, final String paths, final String metrics) throws MeasureApiCallException {
-        return execute(typeToken, paths, metrics, Optional.<Instant>absent());
+        return execute(typeToken, paths, metrics, Optional.empty());
     }
 
     public <T> T execute(final TypeToken<T> typeToken, final String paths, final String metrics, final Optional<Instant> date) throws MeasureApiCallException {
@@ -179,14 +179,14 @@ public class MeasureApiCall {
             try {
                 out = new Gson().fromJson(body, MeasureApiErrorResponse.class);
             } catch(final Exception ex) {
-                return Optional.absent();
+                return Optional.empty();
             }
             if (out == null || out.alertMessages.size() == 0) {
-                return Optional.absent();
+                return Optional.empty();
             }
             final AlertMessage am0 = out.alertMessages.get(0);
             logger.println(am0.stackTrace);
-            return Optional.fromNullable(am0.message);
+            return Optional.ofNullable(am0.message);
         }
 
         // Body is html. Happens e.g. in case non-existing section is provided
@@ -195,7 +195,7 @@ public class MeasureApiCall {
             return Optional.of(matcher.group(1));
         }
 
-        return Optional.absent();
+        return Optional.empty();
     }
 
 

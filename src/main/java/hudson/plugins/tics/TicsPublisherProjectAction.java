@@ -1,20 +1,18 @@
 package hudson.plugins.tics;
 
-import hudson.model.Result;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.Run;
 
 public class TicsPublisherProjectAction extends AbstractTicsPublisherAction {
-    public final AbstractProject<?, ?> project;
+    public final Run<?, ?> run;
 
-    public TicsPublisherProjectAction(final AbstractProject<?, ?> project) {
-        this.project = project;
+    public TicsPublisherProjectAction(final Run<?, ?> run) {
+        this.run = run;
     }
 
     public String getIconFileName() {
         // We return null to indicate that their should not be a link in the sidebar on the left.
         // The TICS results are already in the floating box.
-        return null; 
+        return null;
         //return "/plugin/tics/tics24x24.gif";
     }
 
@@ -23,11 +21,7 @@ public class TicsPublisherProjectAction extends AbstractTicsPublisherAction {
      * Gets the most recent {@link TicsPublisherBuildAction} object.
      */
     public TicsPublisherBuildAction getLastBuild() {
-        //System.out.println("getLastResult()");
-        for (AbstractBuild<?, ?> b = project.getLastBuild(); b != null; b = b.getPreviousBuild()) {
-            if (b.isBuilding() || b.getResult() == Result.FAILURE || b.getResult() == Result.ABORTED) {
-                continue;
-            }
+        for (Run<?, ?> b = run.getParent().getLastBuild(); b != null; b = b.getPreviousBuild()) {
             final TicsPublisherBuildAction r = b.getAction(TicsPublisherBuildAction.class);
             if (r != null) {
                 return r;

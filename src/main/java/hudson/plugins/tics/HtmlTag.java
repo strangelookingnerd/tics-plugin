@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Map.Entry;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 
@@ -74,7 +74,7 @@ public class HtmlTag {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).add("tag", tag).toString();
+        return MoreObjects.toStringHelper(this).add("tag", tag).toString();
     }
 
 }

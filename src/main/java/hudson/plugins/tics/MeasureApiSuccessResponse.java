@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.joda.time.Instant;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 
@@ -21,7 +21,7 @@ public class MeasureApiSuccessResponse<T> {
         public String fullName;
 
         public String getExpression() {
-            return Objects.firstNonNull(expression, "");
+            return MoreObjects.firstNonNull(expression, "");
         }
     }
 
@@ -62,7 +62,7 @@ public class MeasureApiSuccessResponse<T> {
         }
 
         public String getName() {
-            return Objects.firstNonNull(name, "?");
+            return MoreObjects.firstNonNull(name, "?");
         }
     }
 

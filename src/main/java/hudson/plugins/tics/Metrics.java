@@ -1,15 +1,15 @@
 package hudson.plugins.tics;
 
-import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
-
 import java.lang.reflect.Field;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+
+import hudson.Extension;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
 
 /** See resources/../Metrics/config.jelly for view that is used to configure this model */
 public class Metrics extends AbstractDescribableImpl<Metrics> {
@@ -159,7 +159,7 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
     }
 
     public ImmutableList<String> getEnabledMetrics() {
-        final ImmutableList.Builder<String> out = ImmutableList.builder(); 
+        final ImmutableList.Builder<String> out = ImmutableList.builder();
         for (final Field f : this.getClass().getFields()) {
             final boolean enabled;
             try {
@@ -172,5 +172,5 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
             }
         }
         return out.build();
-    }    
+    }
 }
