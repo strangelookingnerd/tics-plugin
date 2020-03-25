@@ -3,5 +3,5 @@
 -->
 <div>
   This plugin from <a href="http://www.tiobe.com" target="_blank">TIOBE</a> adds a TICS analysis build step
-  for running TICSQServer and a post-build step that extracts TICS Quality Indicators from the TICS Viewer and publishes them in Jenkins.
+  for running TICSQServer and a post-build step that extracts TICS Quality Indicators and Quality Gate results from the TICS Viewer, and publishes them in Jenkins.
 </div>

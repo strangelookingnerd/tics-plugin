@@ -14,9 +14,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import hudson.Extension;
@@ -155,42 +153,42 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     }
 
     @DataBoundSetter
-    public void setRecalc (List<String> value) {
+    public void setRecalc (final List<String> value) {
         this.recalc = value;
     }
 
     @DataBoundSetter
-    public void setCalc (List<String> value) {
+    public void setCalc (final List<String> value) {
         this.calc = value;
     }
 
     @DataBoundSetter
-    public void setTicsConfiguration(String value) {
+    public void setTicsConfiguration(final String value) {
         this.ticsConfiguration = value;
     }
 
     @DataBoundSetter
-    public void setTicsBin(String value) {
+    public void setTicsBin(final String value) {
         this.ticsBin = value;
     }
 
     @DataBoundSetter
-    public void setBranchDirectory(String value) {
+    public void setBranchDirectory(final String value) {
         this.branchDirectory = value;
     }
 
     @DataBoundSetter
-    public void setExtraArguments(String value) {
+    public void setExtraArguments(final String value) {
         this.extraArguments = value;
     }
 
     @DataBoundSetter
-    public void setTmpdir(String value) {
+    public void setTmpdir(final String value) {
         this.tmpdir = value;
     }
 
     @DataBoundSetter
-    public void setEnvironmentVariables(LinkedHashMap<String, String> value) {
+    public void setEnvironmentVariables(final LinkedHashMap<String, String> value) {
         this.environmentVariables = value;
     }
 

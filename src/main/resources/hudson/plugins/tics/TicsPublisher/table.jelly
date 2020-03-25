@@ -1,7 +1,7 @@
 <?jelly escape-by-default='false'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" 
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local">
-         
+
   <table style="width: 100%">
     <tr>
       <td rowspan="2" style="width: 76px; vertical-align: middle;">
@@ -15,15 +15,34 @@
       </td>
     </tr>
   </table>
-         
+
   <j:choose>
     <j:when test="${it.tableHtml == null}">
-      No results available. TICS Quality Indicators will be collected during the next build. 
+      No results available. TICS Quality Indicators will be collected during the next build.
     </j:when>
     <j:otherwise>
       ${it.tableHtml}
-      <div>Measured at ${it.measurementDate}</div>
+      <div style="margin-bottom: 20px">Measured at ${it.measurementDate}</div>
     </j:otherwise>
   </j:choose>
-  
+
+  <j:choose>
+    <j:when test="${it.qualityGateTableHtml == null}">
+
+    </j:when>
+    <j:otherwise>
+      <table style="width: 100%">
+        <tr>
+          <td rowspan="2" style="width: 76px; vertical-align: middle;">
+            <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
+          </td>
+          <td><b>Quality Gate Summary</b></td>
+        </tr>
+      </table>
+      ${it.qualityGateTableHtml}
+      <a target="_blank" href="${it.viewerQualityGateDetails}"> See results in TICS Viewer</a>
+      <div style="margin-bottom: 20px">Measured at ${it.measurementDate}</div>
+    </j:otherwise>
+  </j:choose>
+
 </j:jelly>

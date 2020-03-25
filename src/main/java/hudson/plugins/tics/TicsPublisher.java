@@ -44,6 +44,7 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
+import hudson.plugins.tics.TicsQualityGate.QualityGateResult;
 import hudson.plugins.tics.TqiPublisherResultBuilder.TqiPublisherResult;
 import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
@@ -60,6 +61,8 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
     private final String ticsPath;
     private final String viewerUrl;
     private final String credentialsId;
+    private final boolean checkQualityGate;
+    private final boolean failIfQualityGateFails;
 
     /**
      * Constructor arguments are injected by Jenkins, using settings stored through config.jelly.
@@ -68,10 +71,14 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
     public TicsPublisher(final String viewerUrl
             , final String ticsPath
             , final String credentialsId
-            ) { // Note: variable names must match names in TicsPublisher/config.jelly
+            , final boolean checkQualityGate
+            , final boolean failIfQualityGateFails
+    ) { // Note: variable names must match names in TicsPublisher/config.jelly
         this.viewerUrl = viewerUrl;
         this.ticsPath = ticsPath;
         this.credentialsId = credentialsId;
+        this.checkQualityGate = checkQualityGate;
+        this.failIfQualityGateFails = failIfQualityGateFails;
     }
 
     /** Referenced in <tt>config.jelly</tt>. */
@@ -97,14 +104,28 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         return getDescriptor().getViewerUrl();
     }
 
+    /** Referenced in <tt>config.jelly</tt>. */
+    public boolean getCheckQualityGate() {
+        return checkQualityGate;
+    }
+
+    /** Referenced in <tt>config.jelly</tt>. */
+    public boolean getFailIfQualityGateFails() {
+        return failIfQualityGateFails;
+    }
+
     @Override
     public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
         final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), credentialsId);
         final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(ticsPath), "Path not specified"), run.getEnvironment(listener));
 
         final String measureApiUrl;
+        final String qualityGateUrl;
+        final String tiobeWebBaseUrl;
         try {
             measureApiUrl = getResolvedTiobewebBaseUrl() + "/api/public/v1/Measure";
+            qualityGateUrl = getResolvedTiobewebBaseUrl() + "/api/public/v1/QualityGateStatus";
+            tiobeWebBaseUrl = getResolvedTiobewebBaseUrl();
         } catch (final InvalidTicsViewerUrl ex) {
             ex.printStackTrace(listener.getLogger());
             throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
@@ -116,18 +137,33 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
                 measureApiUrl,
                 ticsPath1);
 
-        TqiPublisherResult result;
+        TqiPublisherResult tqiLabelResult;
+        QualityGateResult qualityGateResult = null;
+
         try {
-            result = builder.run();
+            tqiLabelResult = builder.run();
         } catch (final Exception e) {
             listener.getLogger().println(LOGGING_PREFIX + e.getMessage());
             listener.getLogger().println(Throwables.getStackTraceAsString(e));
-            result = null;
-        } finally {
-            builder.close();
+            tqiLabelResult = null;
         }
 
-        run.addAction(new TicsPublisherBuildAction(run, result));
+        if (checkQualityGate) {
+            final TicsQualityGate qualityGate = new TicsQualityGate(qualityGateUrl, tiobeWebBaseUrl, failIfQualityGateFails, ticsPath1, credentials, run, listener);
+            try {
+                qualityGateResult = qualityGate.createQualityGateResult();
+                // Add action only when Quality Gate is enabled
+            } catch (final Exception e) {
+                qualityGateResult = null;
+                if (failIfQualityGateFails) {
+                    // Mark the run as failure when failIfQualityGatingFails is set, and any exception was thrown during the Quality Gate calculation
+                    run.setResult(Result.FAILURE);
+                }
+                listener.getLogger().println(Throwables.getStackTraceAsString(e));
+            }
+        }
+
+        run.addAction(new TicsPublisherBuildAction(run, tqiLabelResult, qualityGateResult));
         run.setResult(Result.SUCCESS); // always succeed
     }
 
@@ -146,6 +182,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         return Optional.empty();
     }
 
+    @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
     }
@@ -192,21 +229,16 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
                 return Optional.of(FormValidation.errorWithMarkup("URL should be of the form <code>http(s)://hostname/tiobeweb/section</code>"));
             }
 
-            MeasureApiCall apiCall = null;
             try {
                 final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(url));
                 final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream());
-                apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.empty());
+                final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.empty());
                 apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, "HIE://", "none");
                 return Optional.empty();
             } catch (final MeasureApiCallException e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
             } catch (final InvalidTicsViewerUrl e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
-            } finally {
-                if (apiCall != null) {
-                    apiCall.close();
-                }
             }
         }
 
@@ -285,23 +317,18 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
                 return FormValidation.ok();
             }
 
-            MeasureApiCall apiCall = null;
             try {
                 final EnvVars envvars = project.getEnvironment(null, null);
                 final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
                 final Optional<StandardUsernamePasswordCredentials> creds = getStandardUsernameCredentials(project, credentialsId);
                 final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream());
-                apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, creds);
+                final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, creds);
                 apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, Util.replaceMacro(value, envvars), "none");
                 return FormValidation.ok();
             } catch (final MeasureApiCallException e) {
                 return FormValidation.errorWithMarkup(e.getMessage());
             } catch (final InvalidTicsViewerUrl e) {
                 return FormValidation.errorWithMarkup(e.getMessage());
-            } finally {
-                if (apiCall != null) {
-                    apiCall.close();
-                }
             }
         }
 

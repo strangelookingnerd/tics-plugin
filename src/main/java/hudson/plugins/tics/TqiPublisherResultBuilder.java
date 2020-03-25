@@ -45,35 +45,24 @@ public class TqiPublisherResultBuilder {
     private final PrintStream logger;
     private final DecimalFormat percentageFormatter;
     private final NumberFormat integerFormatter;
-    private MeasureApiCall measureApiCall;
-    private final Optional<StandardUsernamePasswordCredentials> credentials;
     private final String ticsPath;
-    private final String measureApiUrl;
+    private final MeasureApiCall measureApiCall;
 
     public TqiPublisherResultBuilder(final PrintStream logger,
             final Optional<StandardUsernamePasswordCredentials> credentials, final String measureApiUrl, final String ticsPath) {
         this.logger = logger;
-        this.credentials = credentials;
-        this.measureApiUrl = measureApiUrl;
         this.ticsPath = ticsPath;
         this.percentageFormatter = ((DecimalFormat)NumberFormat.getInstance(Locale.US));
         this.percentageFormatter.setMaximumFractionDigits(2);
         this.percentageFormatter.setMinimumFractionDigits(2);
         this.percentageFormatter.setRoundingMode(RoundingMode.FLOOR);
         this.integerFormatter = NumberFormat.getInstance(Locale.US);
-    }
-
-
-    public void close() {
-        if (measureApiCall != null) {
-            measureApiCall.close();
-        }
+        this.measureApiCall = new MeasureApiCall(logger, measureApiUrl, credentials);
     }
 
     public TqiPublisherResult run() {
         String tableHtml;
         try {
-            this.measureApiCall = new MeasureApiCall(logger, measureApiUrl, credentials);
             tableHtml = createTableHtml();
         } catch(final Exception ex) {
             ex.printStackTrace(logger);
@@ -288,6 +277,7 @@ public class TqiPublisherResultBuilder {
 
 
     private final Supplier<Optional<List<Run>>> runDates = Suppliers.memoize(new Supplier<Optional<List<Run>>>() {
+        @Override
         public Optional<List<Run>> get() {
             final MeasureApiSuccessResponse<List<Run>> resp;
             try {
@@ -324,6 +314,7 @@ public class TqiPublisherResultBuilder {
     }
 
     private final Supplier<Optional<Baseline>> baseline = Suppliers.memoize(new Supplier<Optional<Baseline>>() {
+        @Override
         public Optional<Baseline> get() {
             final MeasureApiSuccessResponse<List<Baseline>> resp;
             try {

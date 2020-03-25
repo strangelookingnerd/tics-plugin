@@ -18,6 +18,7 @@ import hudson.model.Descriptor;
 import hudson.model.ProminentProjectAction;
 import hudson.model.Run;
 import hudson.plugins.tics.TicsPublisher.InvalidTicsViewerUrl;
+import hudson.plugins.tics.TicsQualityGate.QualityGateResult;
 import hudson.plugins.tics.TqiPublisherResultBuilder.TqiPublisherResult;
 import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
@@ -27,6 +28,7 @@ import jenkins.tasks.SimpleBuildStep;
  * Note: the fields of TicsPublisherBuildAction are serialized in Jenkins' build.xml files,
  * including the build field!
  * DO NOT CHANGE THESE FIELDS names!
+ *
  * @author dreniers
  */
 public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implements ProminentProjectAction, SimpleBuildStep.LastBuildAction {
@@ -38,18 +40,23 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     public final String tableHtml;
     public final String ticsPath;
     public final String measurementDate;
+    public final String qualityGateTableHtml;
+    public final String qualityGateViewerUrl;
     private final List<TicsPublisherProjectAction> projectActions;
 
-    public TicsPublisherBuildAction(final Run<?, ?> run, final TqiPublisherResult result) {
+    public TicsPublisherBuildAction(final Run<?, ?> run, final TqiPublisherResult tqiPublisherResult, final QualityGateResult qualityGateResult) {
         this.run = run;
-        this.tableHtml = result.tableHtml;
-        this.ticsPath = result.ticsPath;
-        this.measurementDate = result.measurementDate;
-        List<TicsPublisherProjectAction> projectActions = new ArrayList<>();
-        projectActions.add(new TicsPublisherProjectAction(run));
-        this.projectActions = projectActions;
+        this.tableHtml = tqiPublisherResult != null ? tqiPublisherResult.tableHtml : null;
+        this.ticsPath = tqiPublisherResult != null ? tqiPublisherResult.ticsPath : null;
+        this.measurementDate = tqiPublisherResult != null ? tqiPublisherResult.measurementDate : null;
+        this.qualityGateTableHtml = qualityGateResult != null ? qualityGateResult.tableHtml : null;
+        this.qualityGateViewerUrl = qualityGateResult != null ? qualityGateResult.viewerGateUrl : null;
+        final List<TicsPublisherProjectAction> actions = new ArrayList<>();
+        actions.add(new TicsPublisherProjectAction(run));
+        this.projectActions = actions;
     }
 
+    @Override
     public String getIconFileName() {
         // We return null to indicate that their should not be a link in the sidebar on the left.
         // The TICS results are already in the summary.
@@ -65,11 +72,12 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
 
     /**
      * From: http://grepcode.com/file_/repo1.maven.org/maven2/org.hudsonci.plugins/artifactory/2.1.3-h-2/org/jfrog/hudson/action/ActionableHelper.java/?v=source
+     *
      * @return The project publisher of the given type. Null if not found.
      */
     public static <T extends Publisher> T getPublisher(final Run<?, ?> run, final Class<T> type) {
         // Pipeline runs are not an instance of AbstractProject
-        if (run.getParent() instanceof AbstractProject<?,?>) {
+        if (run.getParent() instanceof AbstractProject<?, ?>) {
             final AbstractProject<?, ?> project = (AbstractProject<?, ?>) run.getParent();
             final DescribableList<Publisher, Descriptor<Publisher>> publishersList = project.getPublishersList();
             for (final Publisher publisher : publishersList) {
@@ -81,7 +89,21 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
         return null;
     }
 
+    public final String getViewerQualityGateDetails() {
+        if (qualityGateViewerUrl == null) {
+            return "";
+        }
+        final String escapedQualityGateViewerUrl = "/" + qualityGateViewerUrl.replace("(", "%28").replace(")", "%29");
+        return openInViewerUrl(escapedQualityGateViewerUrl, "");
+    }
+
     public final String getOpenInViewerUrl() {
+        final String dashboardFilePath = "/TqiDashboard.html";
+        final String fragment = "axes=" + ticsPath;
+        return openInViewerUrl(dashboardFilePath, fragment);
+    }
+
+    public final String openInViewerUrl(final String link, final String fragment) {
         if (run == null) {
             return "";
         }
@@ -98,14 +120,15 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
         }
         final URI uri;
         try {
-            uri = new URIBuilder(baseUrl + "/TqiDashboard.html")
-                .setFragment("axes=" + ticsPath)
-                .build();
+            uri = new URIBuilder(baseUrl + link)
+                    .setFragment(fragment)
+                    .build();
         } catch (final URISyntaxException e) {
             throw Throwables.propagate(e);
         }
         return uri.toString();
-   }
+
+    }
 
     @Override
     public Collection<? extends Action> getProjectActions() {
