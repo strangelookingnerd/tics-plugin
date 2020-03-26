@@ -42,9 +42,16 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     public final String measurementDate;
     public final String qualityGateTableHtml;
     public final String qualityGateViewerUrl;
+    private final String tiobeWebBaseUrl;
+
     private final List<TicsPublisherProjectAction> projectActions;
 
-    public TicsPublisherBuildAction(final Run<?, ?> run, final TqiPublisherResult tqiPublisherResult, final QualityGateResult qualityGateResult) {
+    public TicsPublisherBuildAction(
+            final Run<?, ?> run,
+            final TqiPublisherResult tqiPublisherResult,
+            final QualityGateResult qualityGateResult,
+            final String tiobeWebBaseUrl
+    ) {
         this.run = run;
         this.tableHtml = tqiPublisherResult != null ? tqiPublisherResult.tableHtml : null;
         this.ticsPath = tqiPublisherResult != null ? tqiPublisherResult.ticsPath : null;
@@ -54,6 +61,7 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
         final List<TicsPublisherProjectAction> actions = new ArrayList<>();
         actions.add(new TicsPublisherProjectAction(run));
         this.projectActions = actions;
+        this.tiobeWebBaseUrl = tiobeWebBaseUrl;
     }
 
     @Override
@@ -77,6 +85,7 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
      */
     public static <T extends Publisher> T getPublisher(final Run<?, ?> run, final Class<T> type) {
         // Pipeline runs are not an instance of AbstractProject
+
         if (run.getParent() instanceof AbstractProject<?, ?>) {
             final AbstractProject<?, ?> project = (AbstractProject<?, ?>) run.getParent();
             final DescribableList<Publisher, Descriptor<Publisher>> publishersList = project.getPublishersList();
@@ -90,34 +99,36 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     }
 
     public final String getViewerQualityGateDetails() {
-        if (qualityGateViewerUrl == null) {
+        if (this.qualityGateViewerUrl == null) {
             return "";
         }
-        final String escapedQualityGateViewerUrl = "/" + qualityGateViewerUrl.replace("(", "%28").replace(")", "%29");
+        final String escapedQualityGateViewerUrl = "/" + this.qualityGateViewerUrl.replace("(", "%28").replace(")", "%29");
         return openInViewerUrl(escapedQualityGateViewerUrl, "");
     }
 
     public final String getOpenInViewerUrl() {
         final String dashboardFilePath = "/TqiDashboard.html";
-        final String fragment = "axes=" + ticsPath;
+        final String fragment = "axes=" + this.ticsPath;
         return openInViewerUrl(dashboardFilePath, fragment);
     }
 
     public final String openInViewerUrl(final String link, final String fragment) {
-        if (run == null) {
+        if (this.run == null) {
             return "";
         }
 
-        final TicsPublisher publisher = getPublisher(run, TicsPublisher.class);
+        String baseUrl;
+        final TicsPublisher publisher = getPublisher(this.run, TicsPublisher.class);
         if (publisher == null) {
-            return "";
+            baseUrl = this.tiobeWebBaseUrl;
+        } else {
+            try {
+                baseUrl = publisher.getResolvedTiobewebBaseUrl();
+            } catch (final InvalidTicsViewerUrl e) {
+                baseUrl = this.tiobeWebBaseUrl;
+            }
         }
-        final String baseUrl;
-        try {
-            baseUrl = publisher.getResolvedTiobewebBaseUrl();
-        } catch (final InvalidTicsViewerUrl e) {
-            return "";
-        }
+
         final URI uri;
         try {
             uri = new URIBuilder(baseUrl + link)

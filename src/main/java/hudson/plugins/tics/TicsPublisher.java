@@ -163,7 +163,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             }
         }
 
-        run.addAction(new TicsPublisherBuildAction(run, tqiLabelResult, qualityGateResult));
+        run.addAction(new TicsPublisherBuildAction(run, tqiLabelResult, qualityGateResult, tiobeWebBaseUrl));
         run.setResult(Result.SUCCESS); // always succeed
     }
 
