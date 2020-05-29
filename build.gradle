@@ -18,6 +18,7 @@ jenkinsPlugin {
     displayName = 'TICS Plugin'
     url = 'http://www.tiobe.com'
     shortName = 'tics'
+    configureRepositories = false // don't use the default Jenkins repositories; set to true if this causes trouble outside the TIOBE network
 
     developers {
         developer {
@@ -25,6 +26,12 @@ jenkinsPlugin {
             name 'Dennie Reniers'
             email 'dennie.reniers@tiobe.com'
         }
+    }
+}
+
+repositories {
+    maven { 
+        url 'http://artifacts.tiobe.com/repository/maven/'
     }
 }
 
@@ -37,3 +44,12 @@ dependencies {
     implementation group: 'joda-time', name: 'joda-time', 'version': '2.3'
     compile group: 'com.google.guava', name: 'guava', version: '27.0.1-jre'
 }
+
+task configureWrapper {
+  // Make sure that when upgrading the Gradle wrapper, we still use the local TIOBE mirror.
+  doLast {
+    wrapper.distributionUrl = "https://artifacts.tiobe.com/repository/gradle-distributions/gradle-${wrapper.gradleVersion}-bin.zip"
+  }
+}
+
+wrapper.dependsOn configureWrapper
