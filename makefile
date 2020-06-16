@@ -10,13 +10,13 @@ SVNVERSION := $(shell svn info . | sed -n "s/Last Changed Rev: //p")
 GRADLE := $(CURDIR)/gradlew -PSVNVERSION="$(SVNVERSION)" $(DAEMON)
 TOOL := TICSJenkins
 
-all: build
+all: build check
 
 build:
 	$(GRADLE) jpi
 
 check:
-	$(GRADLETOOL) check -x test
+	$(GRADLE) check -x test
 
 clean: clean_relnotes
 	$(GRADLE) clean

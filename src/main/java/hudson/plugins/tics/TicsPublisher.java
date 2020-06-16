@@ -303,7 +303,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         }
 
 
-        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException,  InterruptedException {
+        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, InterruptedException {
             if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Field is required");
             }

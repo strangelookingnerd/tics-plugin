@@ -58,7 +58,7 @@ public abstract class AbstractApiCall {
             if (credentials.isPresent()) {
                 throw new MeasureApiCallException(apiCallPrefix + " 401 Unauthorized - Invalid username/password combination");
             } else {
-                throw new MeasureApiCallException(apiCallPrefix +  " 401 Unauthorized - Project requires authentication, but no credentials provided");
+                throw new MeasureApiCallException(apiCallPrefix + " 401 Unauthorized - Project requires authentication, but no credentials provided");
             }
         }
 

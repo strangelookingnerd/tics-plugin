@@ -84,7 +84,7 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
         }
     }
 
-    private String findUserCredentials(String targetName, String targetValue, java.util.function.Function<StandardUsernamePasswordCredentials, String> func) {
+    private String findUserCredentials(final String targetName, final String targetValue, final java.util.function.Function<StandardUsernamePasswordCredentials, String> func) {
         final List<StandardUsernamePasswordCredentials> credentialsList = CredentialsProvider.
                 lookupCredentials(
                         StandardUsernamePasswordCredentials.class,
@@ -100,37 +100,37 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     }
 
     @DataBoundSetter
-    public void setProjectName(String value) {
+    public void setProjectName(final String value) {
         this.projectName = value;
     }
 
     @DataBoundSetter
-    public void setBranchName(String value) {
+    public void setBranchName(final String value) {
         this.branchName = value;
     }
 
     @DataBoundSetter
-    public void setTicsProjectPath(String value) {
+    public void setTicsProjectPath(final String value) {
         this.ticsProjectPath = value;
     }
 
     @DataBoundSetter
-    public void setUserName(String value) {
+    public void setUserName(final String value) {
         this.userName = value;
     }
 
     @DataBoundSetter
-    public void setUserId(String value) {
+    public void setUserId(final String value) {
         this.userId = value;
     }
 
     @DataBoundSetter
-    public void setCheckQualityGate(boolean value) {
+    public void setCheckQualityGate(final boolean value) {
         this.checkQualityGate = value;
     }
 
     @DataBoundSetter
-    public void setFailIfQualityGateFails(boolean value) {
+    public void setFailIfQualityGateFails(final boolean value) {
         this.failIfQualityGateFails = value;
     }
 
