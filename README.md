@@ -111,14 +111,14 @@ Notes on pipelines
       LINESADDED, LINESDELETED, LINESCHANGED, ACCUCHANGERATE, ACCULINESADDED, ACCULINESDELETED, ACCULINESCHANGED, 
       FIXRATE, ACCUFIXRATE
       
-If the stage/steps are not defined correctly, and the TICS analysis and/or TICS Publish fails for any reason, **an exception will be thrown**, and the entire pipeline run will be stopped. If you want for the pipeline run to continue, even if TICS fails to publish/run, you can surround the TICS stage/steps with a try/catch block. For example:
+* If the stage/steps are not defined correctly, and the TICS analysis and/or TICS Publish fails for any reason, **an exception will be thrown**, and the entire pipeline run will be stopped. If you want for the pipeline run to continue, even if TICS fails to publish/run, you can surround the TICS stage/steps with a try/catch block. For example:
 
-    try {
-      stage('Publish results') {
-        publishTics (
-          // arguments
-        )
-    }
-    catch (e) {
-      // continue execution
-    }
+          try {
+            stage('Publish results') {
+              publishTics (
+                // arguments
+              )
+          }
+          catch (e) {
+            // continue execution
+          }
