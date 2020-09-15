@@ -1,9 +1,9 @@
-# tics-jenkins-plugin
+# TICS Jenkins plugin
 The TICS Jenkins plugin adds two independent actions to Jenkins that can be used in your Jenkins jobs:
 
 * [Run TICS](#run-tics) is a build step that invokes TICS as part of your Jenkins job. Although you could also run TICS via the "Execute shell" build step that is part of the standard Jenkins installation, the Run TICS step helps you to set the most commonly used TICS options in an easy-to-use UI.
 * [Publish TICS](#publish-tics) Results is a post-build step that retrieves TQI scores and deltas from the TICS viewer and puts a TQI statement on the Jenkins job front-page. Note that you do not have to add a Run TICS build step in order to use the Publish TICS Results build step.
-Both steps can be invoked through the classic Jenkins UI or through pipelines. Pipeline syntax for declarative pipelines is explained [below](tics-through-declarative-pipelines).
+Both steps can be invoked through the classic Jenkins UI or through pipelines. Pipeline syntax for declarative pipelines is explained [below](#tics-through-declarative-pipelines).
 
 Before you can use either step you need to install the TICS Jenkins plugin.
 
