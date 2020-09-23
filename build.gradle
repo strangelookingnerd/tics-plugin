@@ -14,7 +14,7 @@ if (!project.hasProperty('SVNVERSION')) {
 version = "${new File('../../make/TICSVERSION').text.trim()}.${SVNVERSION}"
 
 jenkinsPlugin {
-    coreVersion = '2.164.3'
+    jenkinsVersion = '2.164.3'
     displayName = 'TICS Plugin'
     url = 'http://www.tiobe.com'
     shortName = 'tics'
@@ -25,6 +25,15 @@ jenkinsPlugin {
             id 'dreniers'
             name 'Dennie Reniers'
             email 'dennie.reniers@tiobe.com'
+        }
+    }
+    
+    licenses {
+        license {
+            name 'MIT License'
+            url 'https://opensource.org/licenses/MIT'
+            distribution 'repo'
+            comments 'A business-friendly OSS license'
         }
     }
 }
