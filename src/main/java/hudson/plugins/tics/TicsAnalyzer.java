@@ -8,9 +8,11 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.verb.POST;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
@@ -27,6 +29,7 @@ import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Proc;
 import hudson.Util;
+import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.BuildStepDescriptor;
@@ -223,22 +226,39 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             return true; // indicate that everything is good so far
         }
 
+        @POST
+        public FormValidation doCheckProjectName(@AncestorInPath Item item, @QueryParameter final String value) {
+            if (item == null) { // no context
+                return FormValidation.ok();
+            }
+            item.checkPermission(Item.CONFIGURE);
 
-        public FormValidation doCheckProjectName(@QueryParameter final String value) {
             if ("".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a project name");
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckBranchName(@QueryParameter final String value) {
+        @POST
+        public FormValidation doCheckBranchName(@AncestorInPath Item item, @QueryParameter final String value) {
+            if (item == null) { // no context
+                return FormValidation.ok();
+            }
+            item.checkPermission(Item.CONFIGURE);
+
             if ("".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a branch name");
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckTmpdir(@QueryParameter final String value, @QueryParameter final boolean createTmpdir) {
+        @POST
+        public FormValidation doCheckTmpdir(@AncestorInPath Item item, @QueryParameter final String value, @QueryParameter final boolean createTmpdir) {
+            if (item == null) { // no context
+                return FormValidation.ok();
+            }
+            item.checkPermission(Item.CONFIGURE);
+
             if (createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a directory");
             }

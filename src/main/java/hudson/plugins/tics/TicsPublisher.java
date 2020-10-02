@@ -17,7 +17,9 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.verb.POST;
 
+import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
@@ -53,6 +55,7 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 
@@ -276,7 +279,13 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
          * Uses Jenkinks naming convention "doCheckXXXXX" to bind to entry field.
          * Further reading: https://wiki.jenkins-ci.org/display/JENKINS/Form+Validation
          **/
+        @POST
         public FormValidation doCheckViewerUrl(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value) throws IOException, InterruptedException {
+            if (project == null) { // no context
+                return FormValidation.ok();
+            }
+            project.checkPermission(Item.CONFIGURE);
+
             final EnvVars envvars = project.getEnvironment(null, null);
             if (Strings.isNullOrEmpty(value)) {
                 final String globalViewerUrl2 = Util.replaceMacro(Strings.nullToEmpty(this.globalViewerUrl), envvars);
@@ -298,12 +307,22 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         /**
          * Form validation of globalViewerUrl.
          */
-        public FormValidation doCheckGlobalViewerUrl(@QueryParameter final String value) {
+        @POST
+        public FormValidation doCheckGlobalViewerUrl(@AncestorInPath Item item, @QueryParameter final String value) {
+            if (item == null) { // no context
+                return FormValidation.ok();
+            }
+            item.checkPermission(Item.CONFIGURE);
             return checkViewerUrlForErrorsOrWarnings(value);
         }
 
-
+        @POST
         public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, InterruptedException {
+            if (project == null) { // no context
+                return FormValidation.ok();
+            }
+            project.checkPermission(Item.CONFIGURE);
+
             if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Field is required");
             }
@@ -342,33 +361,28 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             return globalViewerUrl;
         }
 
-
         /** Called by Jenkins to fill credentials dropdown list */
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String remote) {
-            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel();
-            }
-            return fillCredentialsIdItems(context, remote);
-        }
-
-        public ListBoxModel fillCredentialsIdItems(@Nonnull final Item context, final String remote) {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String credentialsId) {
             final List<DomainRequirement> domainRequirements;
-            if (remote == null) {
+            final CredentialsMatcher credentialsMatcher = CredentialsMatchers.anyOf(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (context == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            } else {
+                if (!context.hasPermission(Item.CONFIGURE)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            }
+            if (credentialsId == null) {
                 domainRequirements = Collections.<DomainRequirement>emptyList();
             } else {
-                domainRequirements = URIRequirementBuilder.fromUri(remote.trim()).build();
+                domainRequirements = URIRequirementBuilder.fromUri(credentialsId.trim()).build();
             }
-            return new StandardListBoxModel()
-                .withEmptySelection()
-                .withMatching(
-                        CredentialsMatchers.anyOf(
-                                CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class)
-                                ),
-                                CredentialsProvider.lookupCredentials(StandardCredentials.class,
-                                        context,
-                                        ACL.SYSTEM,
-                                        domainRequirements)
-                        );
+            return result
+                    .includeEmptyValue()
+                    .includeMatchingAs(ACL.SYSTEM, context, StandardCredentials.class, domainRequirements, credentialsMatcher);
         }
     }
 

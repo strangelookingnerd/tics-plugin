@@ -2,12 +2,12 @@
 
   <f:section title="TICS Publisher">
 
-    <f:entry title="TICS Viewer URL" 
+    <f:entry title="TICS Viewer URL"
         field="globalViewerUrl"
       >
-      <f:textbox />
+      <f:textbox checkMethod="post" />
     </f:entry>
 
   </f:section>
-  
+
 </j:jelly>
