@@ -36,9 +36,7 @@ jenkinsPlugin {
 }
 
 repositories {
-    maven { 
-        //url 'https://artifacts.tiobe.com/repository/maven/'
-    }
+    // maven { url 'https://artifacts.tiobe.com/repository/maven/' }
 }
 
 dependencies {
