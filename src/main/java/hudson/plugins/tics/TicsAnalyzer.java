@@ -60,7 +60,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
      * This annotation tells Hudson to call this constructor, with values from the configuration form page with matching parameter names.
      * See https://wiki.jenkins-ci.org/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins for explanation of DataBoundConstructor
      *
-     * DO NOT RENAME THESE PARAMETERS, as they are serialized (by Jenkins) in jobs/<project>/config.xml
+     * DO NOT RENAME THESE PARAMETERS, as they are serialized (by Jenkins) in jobs/[PROJECT]/config.xml
      */
     @DataBoundConstructor
     public TicsAnalyzer(
@@ -227,7 +227,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckProjectName(@AncestorInPath Item item, @QueryParameter final String value) {
+        public FormValidation doCheckProjectName(@AncestorInPath final Item item, @QueryParameter final String value) {
             if (item == null) { // no context
                 return FormValidation.ok();
             }
@@ -240,7 +240,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckBranchName(@AncestorInPath Item item, @QueryParameter final String value) {
+        public FormValidation doCheckBranchName(@AncestorInPath final Item item, @QueryParameter final String value) {
             if (item == null) { // no context
                 return FormValidation.ok();
             }
@@ -253,7 +253,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckTmpdir(@AncestorInPath Item item, @QueryParameter final String value, @QueryParameter final boolean createTmpdir) {
+        public FormValidation doCheckTmpdir(@AncestorInPath final Item item, @QueryParameter final String value, @QueryParameter final boolean createTmpdir) {
             if (item == null) { // no context
                 return FormValidation.ok();
             }

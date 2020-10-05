@@ -84,17 +84,17 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         this.failIfQualityGateFails = failIfQualityGateFails;
     }
 
-    /** Referenced in <tt>config.jelly</tt>. */
+    /** Referenced in <code>config.jelly</code>. */
     public String getTicsPath() {
         return ticsPath;
     }
 
-    /** Referenced in <tt>config.jelly</tt>. */
+    /** Referenced in <code>config.jelly</code>. */
     public String getViewerUrl() {
         return viewerUrl;
     }
 
-    /** Referenced in <tt>config.jelly</tt>. */
+    /** Referenced in <code>config.jelly</code>. */
     public String getCredentialsId() {
         return credentialsId;
     }
@@ -107,12 +107,12 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         return getDescriptor().getViewerUrl();
     }
 
-    /** Referenced in <tt>config.jelly</tt>. */
+    /** Referenced in <code>config.jelly</code>. */
     public boolean getCheckQualityGate() {
         return checkQualityGate;
     }
 
-    /** Referenced in <tt>config.jelly</tt>. */
+    /** Referenced in <code>config.jelly</code>. */
     public boolean getFailIfQualityGateFails() {
         return failIfQualityGateFails;
     }
@@ -308,7 +308,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
          * Form validation of globalViewerUrl.
          */
         @POST
-        public FormValidation doCheckGlobalViewerUrl(@AncestorInPath Item item, @QueryParameter final String value) {
+        public FormValidation doCheckGlobalViewerUrl(@AncestorInPath final Item item, @QueryParameter final String value) {
             if (item == null) { // no context
                 return FormValidation.ok();
             }
@@ -356,7 +356,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             return true;
         }
 
-        /** Referenced in <tt>global.jelly</tt>. */
+        /** Referenced in <code>global.jelly</code>. */
         public String getViewerUrl() {
             return globalViewerUrl;
         }
@@ -365,7 +365,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String credentialsId) {
             final List<DomainRequirement> domainRequirements;
             final CredentialsMatcher credentialsMatcher = CredentialsMatchers.anyOf(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
-            StandardListBoxModel result = new StandardListBoxModel();
+            final StandardListBoxModel result = new StandardListBoxModel();
             if (context == null) {
                 if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
                     return result.includeCurrentValue(credentialsId);
