@@ -1,0 +1,3 @@
+<testsuite tests="1">
+    <testcase classname="foo1" name="ASuccessfulTest"/>
+</testsuite>
