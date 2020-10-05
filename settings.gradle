@@ -1,12 +1,12 @@
-pluginManagement {
-    repositories {
+//pluginManagement {
+//    repositories {
         // Specifying this custom repository enables us to cache Gradle plugins within TIOBE.
         // If this causes trouble, either make sure you are in the TIOBE network, or
         // comment out these lines temporarily.
-        maven {
-            url 'https://artifacts.tiobe.com/repository/maven/'
-        }
-    }
-}
+//        maven {
+//            url 'https://artifacts.tiobe.com/repository/maven/'
+//        }
+//    }
+//}
 
 rootProject.name = "tics"
