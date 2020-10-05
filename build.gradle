@@ -51,11 +51,11 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: '27.0.1-jre'
 }
 
-task configureWrapper {
-  // Make sure that when upgrading the Gradle wrapper, we still use the local TIOBE mirror.
-  doLast {
-    wrapper.distributionUrl = "https://artifacts.tiobe.com/repository/gradle-distributions/gradle-${wrapper.gradleVersion}-bin.zip"
-  }
-}
+//task configureWrapper {
+//  // Make sure that when upgrading the Gradle wrapper, we still use the local TIOBE mirror.
+//  doLast {
+//    wrapper.distributionUrl = "https://artifacts.tiobe.com/repository/gradle-distributions/gradle-${wrapper.gradleVersion}-bin.zip"
+//}
+//}
 
-wrapper.dependsOn configureWrapper
+//wrapper.dependsOn configureWrapper
