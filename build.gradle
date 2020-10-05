@@ -15,7 +15,7 @@ jenkinsPlugin {
     displayName = 'TICS Plugin'
     url = 'http://www.tiobe.com'
     shortName = 'tics'
-    configureRepositories = false // don't use the default Jenkins repositories; set to true if this causes trouble outside the TIOBE network
+    configureRepositories = true // don't use the default Jenkins repositories; set to true if this causes trouble outside the TIOBE network
 
     developers {
         developer {
@@ -37,7 +37,7 @@ jenkinsPlugin {
 
 repositories {
     maven { 
-        url 'https://artifacts.tiobe.com/repository/maven/'
+        //url 'https://artifacts.tiobe.com/repository/maven/'
     }
 }
 
