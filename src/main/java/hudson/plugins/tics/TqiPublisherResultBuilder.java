@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 
@@ -20,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.MeasureApiSuccessResponse.Baseline;
 import hudson.plugins.tics.MeasureApiSuccessResponse.Metric;
@@ -66,18 +68,13 @@ public class TqiPublisherResultBuilder {
             tableHtml = createTableHtml();
         } catch(final Exception ex) {
             ex.printStackTrace(logger);
-            final String msg = ex.getMessage();
-            tableHtml = "<div>"
-                     + "An error occurred while retrieving metrics: "
-                    + "<blockquote>" + msg + "</blockquote>"
-                    + "Consult the console output for more information."
-                    + "</div>";
             throw new RuntimeException("Could not publish the TICS results.", ex);
         }
         return new TqiPublisherResult(tableHtml, ticsPath);
     }
 
 
+    @SuppressFBWarnings("UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")
     private String createTableHtml() throws MeasureApiCallException {
         final boolean hasSecurity = doesTqiVersionIncludeSecurity();
         final String metrics = hasSecurity ? METRICS_4_0 : METRICS_3_11;
@@ -124,6 +121,9 @@ public class TqiPublisherResultBuilder {
         for (int i=0; i<mvsCurrent.data.size(); i++) {
             final Metric metric = mvsCurrent.metrics.get(i);
             final MetricValue<Double> mvNow = Iterables.get(mvsCurrent.data, i, EMPTY_METRICVALUE);
+            if (mvNow == null) {
+                continue;
+            }
             final HtmlTag tr = HtmlTag.from("tr")
                     ;
             sb.append(tr.open());
@@ -156,14 +156,20 @@ public class TqiPublisherResultBuilder {
             sb.append(td.open());
             sb.append(getLetterToBadge(mvNow.letter));
             sb.append(td.close());
-
             if (mvsPrevious.isPresent()) {
-                outputDeltaCell(sb, td, metric, mvNow.value, Iterables.get(mvsPrevious.get().data, i, EMPTY_METRICVALUE).value);
+                final @Nullable MetricValue<Double> mvpi = Iterables.get(mvsPrevious.get().data, i, EMPTY_METRICVALUE);
+                if (mvpi != null) {
+                    outputDeltaCell(sb, td, metric, mvNow.value, mvpi.value);
+                }
             }
 
             if (mvsBaseline.isPresent()) {
-                outputDeltaCell(sb, td, metric, mvNow.value, Iterables.get(mvsBaseline.get().data, i, EMPTY_METRICVALUE).value);
+                final @Nullable MetricValue<Double> mvpi = Iterables.get(mvsBaseline.get().data, i, EMPTY_METRICVALUE);
+                if (mvpi != null) {
+                    outputDeltaCell(sb, td, metric, mvNow.value, mvpi.value);
+                }
             }
+
 
             sb.append(tr.close());
         }
@@ -328,10 +334,11 @@ public class TqiPublisherResultBuilder {
             }
             final MetricValue<List<Baseline>> mv = resp.data.get(0);
             final List<Baseline> baselines = mv.value;
-            if (baselines.isEmpty()) {
+            if (baselines == null || baselines.isEmpty()) {
                 return Optional.empty();
+            } else {
+                return Optional.of(baselines.get(baselines.size()-1));
             }
-            return Optional.of(baselines.get(baselines.size()-1));
         }
     });
 

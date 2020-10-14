@@ -38,8 +38,15 @@
     <artifactId>tics</artifactId>
     <packaging>hpi</packaging>
     <name>TICS Plugin</name>
-    <version>2020.3.0.7</version>
+    <version>2020.3.0.6-SNAPSHOT</version>
     <url>http://www.tiobe.com</url>
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/tics-plugin.git</connection>
+        <developerConnection>scm:git:https://github.com/jenkinsci/tics-plugin.git
+        </developerConnection>
+        <url>https://github.com/jenkinsci/tics-plugin</url>
+        <tag>tics-plugin-2020.3.0.6-SNAPSHOT</tag>
+    </scm>
 
     <licenses>
         <license>
@@ -56,6 +63,17 @@
             <email>dennie.reniers@tiobe.com</email>
         </developer>
     </developers>
+
+    <distributionManagement>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <repositories>
         <repository>
@@ -108,6 +126,23 @@
             <artifactId>guava</artifactId>
             <version>27.0.1-jre</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-maven-plugin</artifactId>
+            <version>4.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>net.jcip</groupId>
+            <artifactId>jcip-annotations</artifactId>
+            <version>1.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>4.0.4</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <properties>
@@ -133,6 +168,14 @@
     <build>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-scm-plugin</artifactId>
+                    <version>1.11.2</version>
+                    <configuration>
+                        <connectionType>developerConnection</connectionType>
+                    </configuration>
+                </plugin>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>${maven-clean-plugin.version}</version>

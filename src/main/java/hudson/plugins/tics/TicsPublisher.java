@@ -3,6 +3,7 @@ package hudson.plugins.tics;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -234,11 +235,11 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
             try {
                 final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(url));
-                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream());
+                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
                 final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.empty());
                 apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, "HIE://", "none");
                 return Optional.empty();
-            } catch (final MeasureApiCallException e) {
+            } catch (final MeasureApiCallException | UnsupportedEncodingException e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
             } catch (final InvalidTicsViewerUrl e) {
                 return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
@@ -280,13 +281,13 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
          * Further reading: https://wiki.jenkins-ci.org/display/JENKINS/Form+Validation
          **/
         @POST
-        public FormValidation doCheckViewerUrl(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value) throws IOException, InterruptedException {
+        public FormValidation doCheckViewerUrl(@AncestorInPath final AbstractProject<?, ?> project, @AncestorInPath final TaskListener listener, @QueryParameter final String value) throws IOException, InterruptedException {
             if (project == null) { // no context
                 return FormValidation.ok();
             }
             project.checkPermission(Item.CONFIGURE);
 
-            final EnvVars envvars = project.getEnvironment(null, null);
+            final EnvVars envvars = project.getEnvironment(null, listener);
             if (Strings.isNullOrEmpty(value)) {
                 final String globalViewerUrl2 = Util.replaceMacro(Strings.nullToEmpty(this.globalViewerUrl), envvars);
                 // Check whether correctly defined at global level
@@ -317,7 +318,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, InterruptedException {
+        public FormValidation doCheckTicsPath(@AncestorInPath final AbstractProject<?, ?> project, @AncestorInPath final TaskListener listener, @QueryParameter final String value, @QueryParameter final String viewerUrl, @QueryParameter final String credentialsId) throws IOException, InterruptedException {
             if (project == null) { // no context
                 return FormValidation.ok();
             }
@@ -337,10 +338,10 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             }
 
             try {
-                final EnvVars envvars = project.getEnvironment(null, null);
+                final EnvVars envvars = project.getEnvironment(null, listener);
                 final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
                 final Optional<StandardUsernamePasswordCredentials> creds = getStandardUsernameCredentials(project, credentialsId);
-                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream());
+                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
                 final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, creds);
                 apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, Util.replaceMacro(value, envvars), "none");
                 return FormValidation.ok();
