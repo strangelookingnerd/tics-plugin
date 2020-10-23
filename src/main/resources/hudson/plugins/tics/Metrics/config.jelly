@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:entry>
     <style type="text/css">
@@ -5,14 +6,14 @@
         border-collapse: collapse;
         border: 1px solid #CCC;
       }
-      table.tics-table.table-striped tbody > tr:nth-child(odd) > td, .table-striped tbody > tr:nth-child(odd) > th 
+      table.tics-table.table-striped tbody > tr:nth-child(odd) > td, .table-striped tbody > tr:nth-child(odd) > th
       {
         background-color: #f9f9f9;
       }
       table.tics-table td {
         padding: 5px;
       }
-    </style>  
+    </style>
     <table class="tics-table table-striped">
       <tr>
         <td>

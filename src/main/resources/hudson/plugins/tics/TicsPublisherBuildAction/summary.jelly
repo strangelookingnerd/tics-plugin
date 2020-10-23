@@ -1,10 +1,11 @@
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
-         
+
   <t:summary icon="/plugin/tics/tiobe48x48-shadow.gif">
     <div style="padding-top: 1px"></div>
-    
+
     <st:include page="table.jelly" class="hudson.plugins.tics.TicsPublisher"/>
-    
+
   </t:summary>
 </j:jelly>
