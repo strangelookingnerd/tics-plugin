@@ -47,8 +47,6 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
-import hudson.plugins.tics.TicsQualityGate.QualityGateResult;
-import hudson.plugins.tics.TqiPublisherResultBuilder.TqiPublisherResult;
 import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -120,8 +118,8 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
-        final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), credentialsId);
-        final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(ticsPath), "Path not specified"), run.getEnvironment(listener));
+        final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), this.credentialsId);
+        final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(this.ticsPath), "Path not specified"), run.getEnvironment(listener));
 
         final String measureApiUrl;
         final String qualityGateUrl;
@@ -135,42 +133,61 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
         }
 
-        final TqiPublisherResultBuilder builder = new TqiPublisherResultBuilder(
-                listener.getLogger(),
-                credentials,
-                measureApiUrl,
-                ticsPath1);
+        final MeasureApiCall measureApiCall = new MeasureApiCall(listener.getLogger(), measureApiUrl, credentials);
+        final MetricData tqiData = getTqiMetricData(listener.getLogger(), ticsPath1, measureApiCall);
 
-        TqiPublisherResult tqiLabelResult;
-        QualityGateResult qualityGateResult = null;
-
-        try {
-            tqiLabelResult = builder.run();
-        } catch (final Exception e) {
-            listener.getLogger().println(LOGGING_PREFIX + e.getMessage());
-            listener.getLogger().println(Throwables.getStackTraceAsString(e));
-            tqiLabelResult = null;
-        }
-
+        QualityGateData gateData;
         if (checkQualityGate) {
-            final TicsQualityGate qualityGate = new TicsQualityGate(qualityGateUrl, tiobeWebBaseUrl, failIfQualityGateFails, ticsPath1, credentials, run, listener);
-            try {
-                qualityGateResult = qualityGate.createQualityGateResult();
-                // Add action only when Quality Gate is enabled
-            } catch (final Exception e) {
-                qualityGateResult = null;
-                if (failIfQualityGateFails) {
-                    // Mark the run as failure when failIfQualityGatingFails is set, and any exception was thrown during the Quality Gate calculation
-                    run.setResult(Result.FAILURE);
-                }
-                listener.getLogger().println(Throwables.getStackTraceAsString(e));
+            final QualityGateApiCall qgApiCall = new QualityGateApiCall(qualityGateUrl, ticsPath1, credentials, listener);
+            gateData = retrieveQualityGateData(qgApiCall, listener, tiobeWebBaseUrl);
+
+            if (!gateData.passed && this.failIfQualityGateFails) {
+                run.setResult(Result.FAILURE);
             }
+        } else {
+            gateData = null;
         }
 
-        run.addAction(new TicsPublisherBuildAction(run, tqiLabelResult, qualityGateResult, tiobeWebBaseUrl));
-        run.setResult(Result.SUCCESS); // always succeed
+        run.addAction(new TicsPublisherBuildAction(run, tqiData, gateData, tiobeWebBaseUrl));
+        run.setResult(Result.SUCCESS); // note that: "has no effect when the result is already set and worse than the proposed result"
     }
 
+    private MetricData getTqiMetricData(final PrintStream logger, final String ticsPath1, final MeasureApiCall apiCall) {
+        final TqiPublisherResultBuilder builder = new TqiPublisherResultBuilder(
+                logger,
+                apiCall,
+                ticsPath1
+                );
+        try {
+            return builder.run();
+        } catch (final Exception e) {
+            logger.println(LOGGING_PREFIX + Throwables.getStackTraceAsString(e));
+            return MetricData.error(ticsPath1, "There was an error while retrieving metric data. See the build log for more information.");
+        }
+    }
+
+    private QualityGateData retrieveQualityGateData(
+            final QualityGateApiCall apiCall,
+            final TaskListener listener,
+            final String tiobeWebBaseUrl
+            ) {
+        try {
+            final QualityGateData gateData = apiCall.retrieveQualityGateData();
+
+            if (gateData.apiResponse != null) {
+                final boolean passed = gateData.apiResponse.passed;
+                final String encodedQualityGateViewerUrl = tiobeWebBaseUrl + "/" + gateData.apiResponse.url.replace("(", "%28").replace(")", "%29");
+
+                listener.getLogger().println(LOGGING_PREFIX + " Quality Gate " + (passed ? "passed": "failed")
+                        + ". Please check the following url for more information: " + encodedQualityGateViewerUrl);
+            }
+
+            return gateData;
+        } catch (final Exception e) {
+            listener.getLogger().println(LOGGING_PREFIX + Throwables.getStackTraceAsString(e));
+            return QualityGateData.error("There was an error while retrieving the quality gate status. See the build log for more information.");
+        }
+    }
 
     static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final Job<?, ?> job, final String credentialsId) {
         if (Strings.isNullOrEmpty(credentialsId)) {

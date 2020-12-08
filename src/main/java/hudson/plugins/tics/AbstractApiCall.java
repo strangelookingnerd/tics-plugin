@@ -13,6 +13,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -36,7 +37,14 @@ public abstract class AbstractApiCall {
     }
 
     protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
-        HttpClientBuilder builder = HttpClients.custom();
+        final int timeoutMs = 300 * 1000;
+        final RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(timeoutMs)
+                .setSocketTimeout(timeoutMs)
+                .setConnectionRequestTimeout(timeoutMs)
+                .build();
+        HttpClientBuilder builder = HttpClients.custom()
+                .setDefaultRequestConfig(requestConfig);
         if (credentials.isPresent()) {
             final String username = credentials.get().getUsername();
             final String password = credentials.get().getPassword().getPlainText();
@@ -68,7 +76,7 @@ public abstract class AbstractApiCall {
             throw new MeasureApiCallException(apiCallPrefix + " " + statusCode + " " + reason + " - " + formattedError.get());
         } else {
             // Do not give body in exception, as it might contain html, potentially messing up the Jenkins view.
-            logger.println(body);
+            logger.println(apiCallPrefix + " " + body);
             throw new MeasureApiCallException(apiCallPrefix + " " + statusCode + " " + reason + " - See the build log for a detailed error report.");
         }
     }

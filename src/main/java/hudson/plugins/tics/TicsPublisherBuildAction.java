@@ -7,10 +7,9 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.http.client.utils.URIBuilder;
-import org.joda.time.Instant;
+import org.joda.time.DateTime;
 
-import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 
 import hudson.model.AbstractProject;
 import hudson.model.Action;
@@ -18,8 +17,6 @@ import hudson.model.Descriptor;
 import hudson.model.ProminentProjectAction;
 import hudson.model.Run;
 import hudson.plugins.tics.TicsPublisher.InvalidTicsViewerUrl;
-import hudson.plugins.tics.TicsQualityGate.QualityGateResult;
-import hudson.plugins.tics.TqiPublisherResultBuilder.TqiPublisherResult;
 import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
 import jenkins.tasks.SimpleBuildStep;
@@ -37,27 +34,21 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
      * I tried adding the publisher as a field here, but that just stores the fields, not the reference.
      **/
     private final Run<?, ?> run;
-    public final String tableHtml;
-    public final String ticsPath;
-    public final String measurementDate;
-    public final String qualityGateTableHtml;
-    public final String qualityGateViewerUrl;
+    public final MetricData tqiData;
+    public final QualityGateData gateData;
     private final String tiobeWebBaseUrl;
 
     private final List<TicsPublisherProjectAction> projectActions;
 
     public TicsPublisherBuildAction(
             final Run<?, ?> run,
-            final TqiPublisherResult tqiPublisherResult,
-            final QualityGateResult qualityGateResult,
+            final MetricData tqiData,
+            final QualityGateData QualityGateData,
             final String tiobeWebBaseUrl
     ) {
         this.run = run;
-        this.tableHtml = tqiPublisherResult != null ? tqiPublisherResult.tableHtml : null;
-        this.ticsPath = tqiPublisherResult != null ? tqiPublisherResult.ticsPath : null;
-        this.measurementDate = tqiPublisherResult != null ? tqiPublisherResult.measurementDate : null;
-        this.qualityGateTableHtml = qualityGateResult != null ? qualityGateResult.tableHtml : null;
-        this.qualityGateViewerUrl = qualityGateResult != null ? qualityGateResult.viewerGateUrl : null;
+        this.tqiData = tqiData;
+        this.gateData = QualityGateData;
         final List<TicsPublisherProjectAction> actions = new ArrayList<>();
         actions.add(new TicsPublisherProjectAction(run));
         this.projectActions = actions;
@@ -69,13 +60,6 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
         // We return null to indicate that their should not be a link in the sidebar on the left.
         // The TICS results are already in the summary.
         return null;
-    }
-
-    public String getMeasurementDate() {
-        if (Strings.isNullOrEmpty(measurementDate)) {
-            return "?";
-        }
-        return new Instant(measurementDate).toDateTime().toString("yyyy-MM-dd HH:mm");
     }
 
     /**
@@ -98,17 +82,13 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
         return null;
     }
 
-    public final String getViewerQualityGateDetails() {
-        if (this.qualityGateViewerUrl == null) {
-            return "";
-        }
-        final String escapedQualityGateViewerUrl = "/" + this.qualityGateViewerUrl.replace("(", "%28").replace(")", "%29");
-        return openInViewerUrl(escapedQualityGateViewerUrl, "");
-    }
 
     public final String getOpenInViewerUrl() {
+        if (this.tqiData == null) {
+            return null;
+        }
         final String dashboardFilePath = "/TqiDashboard.html";
-        final String fragment = "axes=" + this.ticsPath;
+        final String fragment = "axes=" + tqiData.ticsPath;
         return openInViewerUrl(dashboardFilePath, fragment);
     }
 
@@ -135,14 +115,59 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
                     .setFragment(fragment)
                     .build();
         } catch (final URISyntaxException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
         return uri.toString();
+    }
 
+    public String getLetterForegroundColor(final String letter) {
+        final ImmutableMap<String, String> colors = ImmutableMap.<String, String>builder()
+                .put("A", "white")
+                .put("B", "white")
+                .put("C", "black")
+                .put("D", "black")
+                .put("E", "white")
+                .put("F", "white")
+                .build();
+        return colors.getOrDefault(letter, "black");
+    }
+
+    public String getLetterBackgroundColor(final String letter) {
+        final ImmutableMap<String, String> colors = ImmutableMap.<String, String>builder()
+                .put("A", "#006400")
+                .put("B", "#64AE00")
+                .put("C", "#FFFF00")
+                .put("D", "#FF950E")
+                .put("E", "#FF420E")
+                .put("F", "#BE0000")
+                .build();
+        return colors.getOrDefault(letter, "#CCC");
+    }
+
+    public String formatDate(final String date) {
+        try {
+            return new DateTime(date).toString("YYYY-MM-dd HH:mm:ss");
+        } catch (final IllegalArgumentException ex) {
+            return "-";
+        }
+    }
+
+    public long countConditions(final QualityGateApiResponse.Gate gate, final boolean passed) {
+        return gate.conditions.stream().filter(c -> passed == c.passed).count();
     }
 
     @Override
     public Collection<? extends Action> getProjectActions() {
         return this.projectActions;
     }
+
+
+    public final String getViewerQualityGateDetails() {
+        if (gateData == null || gateData.apiResponse == null || gateData.apiResponse.url == null) {
+            return "";
+        }
+        final String escapedQualityGateViewerUrl = "/" + this.gateData.apiResponse.url;
+        return this.openInViewerUrl(escapedQualityGateViewerUrl, "");
+    }
+
 }

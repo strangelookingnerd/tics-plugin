@@ -1,6 +1,35 @@
-<?jelly escape-by-default='false'?>
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local">
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local"
+         >
+
+<style type="text/css">
+.table-metrics {
+  border-spacing: 0px; 
+  border: 1px solid #CCC;
+  width: 100%;
+}
+.table-metrics th,
+.table-metrics td {
+  padding-top: 2px;
+  padding-bottom: 2px; 
+}
+.table-metrics th > div,
+.table-metrics td > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.table-striped tbody > tr:nth-child(odd) > td,
+.table-striped tbody > tr:nth-child(odd) > th {
+  background-color: #eee;
+}
+table.table-gate td {
+  border-top: 1px solid #CCC;
+  padding: 4px 5px;
+}
+</style>         
+         
 
   <table style="width: 100%">
     <tr>
@@ -11,37 +40,116 @@
     </tr>
     <tr>
       <td>
-        <a href="${it.openInViewerUrl}" target="_blank" title="Open in Viewer">${it.ticsPath == null ? '-' : it.ticsPath}</a>
+        <a href="${it.openInViewerUrl}" target="_blank" title="Open in Viewer">${it.tqiData.ticsPath == null ? '-' : it.tqiData.ticsPath}</a>
       </td>
     </tr>
   </table>
 
   <j:choose>
-    <j:when test="${it.tableHtml == null}">
+    <j:when test="${it.tqiData == null}">
       No results available. TICS Quality Indicators will be collected during the next build.
     </j:when>
+    <j:when test="${it.tqiData.errorMessage != null}">
+      ${it.tqiData.errorMessage}
+    </j:when>
     <j:otherwise>
-      ${it.tableHtml}
-      <div style="margin-bottom: 20px">Measured at ${it.measurementDate}</div>
+      <table class="table-metrics table-striped">
+        <thead>
+          <tr>
+            <th style="text-align: left">Metric</th>
+            <j:forEach var="run" items="${it.tqiData.runs}">
+              <th style="text-align: right; width: 80px; cursor: help;"
+                title="${run.description}"
+              >
+                <div style="max-width: 120px">
+                  ${run.name}
+                </div>
+              </th>
+              <j:if test="${run == it.tqiData.runs[0]}">
+                <th style="width: 30px"><!--letter--></th>
+              </j:if>
+            </j:forEach>
+          </tr>
+        </thead>
+        <tbody>
+          <j:forEach var="metric" items="${it.tqiData.metrics}">
+            <tr>
+              <td><div>${metric}</div></td>
+              <j:forEach var="run" items="${it.tqiData.runs}">
+                <j:set var="mv" value="${run.metricValues[it.tqiData.metrics.indexOf(metric)]}" />
+                <td style="text-align: right">
+                  ${mv.status.startsWith('PRESENT') ? mv.formattedValue : '-'}
+                </td>
+                <j:if test="${run == it.tqiData.runs[0]}">
+                  <td style="text-align: right">
+                    <j:if test="${mv.letter != null}"> 
+                      <span style="color: ${it.getLetterForegroundColor(mv.letter)}; background-color: ${it.getLetterBackgroundColor(mv.letter)}; padding: 0 7px 0 7px; border-radius: 5px; font-weight: bold; text-align: center; box-shadow: 0px 0px 3px #888888;">
+                        ${mv.letter}
+                      </span>
+                    </j:if>
+                  </td>
+                </j:if>
+              </j:forEach>
+            </tr>
+          </j:forEach>
+        </tbody>
+      </table>
+      <div>Measured at ${it.formatDate(it.tqiData.measurementDate)}</div>
     </j:otherwise>
   </j:choose>
 
   <j:choose>
-    <j:when test="${it.qualityGateTableHtml == null}">
+    <table style="width: 100%; margin-top: 20px;">
+      <tr>
+        <td rowspan="2" style="width: 76px; vertical-align: middle;">
+          <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
+        </td>
+        <td><b>Quality Gate Summary</b></td>
+      </tr>
+    </table>
 
+    <j:when test="${it.gateData == null}">
+      No results available. TICS Quality Indicators will be collected during the next build.
+    </j:when>
+    <j:when test="${it.gateData.errorMessage != null}">
+      ${it.gateData.errorMessage}
     </j:when>
     <j:otherwise>
-      <table style="width: 100%">
-        <tr>
-          <td rowspan="2" style="width: 76px; vertical-align: middle;">
-            <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
-          </td>
-          <td><b>Quality Gate Summary</b></td>
-        </tr>
-      </table>
-      ${it.qualityGateTableHtml}
+      <p>
+        <b>Project: </b>
+        ${it.gateData.project}/${it.gateData.branch}
+      </p>
+      <p>${it.gateData.apiResponse.message}</p>
+      
+      <j:forEach var="gate" items="${it.gateData.apiResponse.gates}">
+        <div style="margin-top: 15px">
+          <div style="float: right; display: inline">
+            <img src="${rootURL}/plugin/tics/redFlag.png" width="30" height="20"/>
+            ${it.countConditions(gate, false)} failed
+            <img src="${rootURL}/plugin/tics/greenFlag.png" width="30" height="20"/>
+            ${it.countConditions(gate, true)} passed
+          </div>
+          <h4 style="margin-bottom: 6px">${gate.name}</h4>
+          <table style="border-spacing: 0px; border-collapse: collapse; margin-bottom: 20px"
+            class="table-gate"
+          >
+            <colgroup><col/><col style="width: 100%"/></colgroup>
+            <tbody>
+              <j:forEach var="condition" items="${gate.conditions}">
+                <tr>
+                  <td>
+                    <img src="${rootURL}/plugin/tics/${condition.passed ? 'green' : 'red'}Flag.png" width="30" height="20"/>
+                  </td>
+                  <td>${condition.message}</td>
+                </tr>
+              </j:forEach>
+            </tbody>
+          </table> 
+        </div>
+      </j:forEach>
+  
       <a target="_blank" href="${it.viewerQualityGateDetails}"> See results in TICS Viewer</a>
-      <div style="margin-bottom: 20px">Measured at ${it.measurementDate}</div>
+      <div style="margin-bottom: 20px">Measured at ${it.formatDate(it.gateData.measurementDate)}</div>
     </j:otherwise>
   </j:choose>
 

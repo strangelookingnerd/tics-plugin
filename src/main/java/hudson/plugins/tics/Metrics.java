@@ -165,7 +165,8 @@ public class Metrics extends AbstractDescribableImpl<Metrics> {
             try {
                 enabled = (Boolean)f.get(this);
             } catch (final Exception e) {
-                throw Throwables.propagate(e);
+                Throwables.throwIfUnchecked(e);
+                throw new RuntimeException(e);
             }
             if (enabled) {
                 out.add(f.getName());

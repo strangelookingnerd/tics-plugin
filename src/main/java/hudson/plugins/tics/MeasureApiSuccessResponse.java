@@ -15,6 +15,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class MeasureApiSuccessResponse<T> {
     public static class MetricValue<T> {
         public T value;
+        public String status;
         public String letter;
         public String formattedValue;
     }

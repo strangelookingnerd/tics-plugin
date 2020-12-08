@@ -11,7 +11,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.joda.time.Instant;
 
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Preconditions;
@@ -24,6 +23,7 @@ import hudson.plugins.tics.MeasureApiSuccessResponse.Run;
 import hudson.plugins.tics.MeasureApiSuccessResponse.TqiVersion;
 
 public class MeasureApiCall extends AbstractApiCall {
+    public static final TypeToken<MeasureApiSuccessResponse<Number>> RESPONSE_NUMBER_TYPETOKEN = new TypeToken<MeasureApiSuccessResponse<Number>>(){/**/};
     public static final TypeToken<MeasureApiSuccessResponse<Double>> RESPONSE_DOUBLE_TYPETOKEN = new TypeToken<MeasureApiSuccessResponse<Double>>(){/**/};
     public static final TypeToken<MeasureApiSuccessResponse<TqiVersion>> RESPONSE_TQIVERSION_TYPETOKEN = new TypeToken<MeasureApiSuccessResponse<TqiVersion>>(){/**/};
     public static final TypeToken<MeasureApiSuccessResponse<List<Run>>> RESPONSE_RUNS_TYPETOKEN = new TypeToken<MeasureApiSuccessResponse<List<Run>>>(){/**/};
@@ -54,21 +54,13 @@ public class MeasureApiCall extends AbstractApiCall {
     }
 
     public <T> T execute(final TypeToken<T> typeToken, final String paths, final String metrics) throws MeasureApiCallException {
-        return execute(typeToken, paths, metrics, Optional.empty());
-    }
-
-    public <T> T execute(final TypeToken<T> typeToken, final String paths, final String metrics, final Optional<Instant> date) throws MeasureApiCallException {
         URIBuilder builder;
         try {
-            builder = new URIBuilder(measureApiUrl)
+            builder = new URIBuilder(this.measureApiUrl)
                 .setParameter("nodes", paths)
                 .setParameter("metrics", metrics);
         } catch (final URISyntaxException e) {
             throw new MeasureApiCallException("Invalid URL: " + e.getMessage());
-        }
-        if (date.isPresent()) {
-            final long seconds = date.get().getMillis() / 1000;
-            builder = builder.setParameter("dates", ""+seconds);
         }
         final String url;
         try {
@@ -84,11 +76,11 @@ public class MeasureApiCall extends AbstractApiCall {
         logger.println(TicsPublisher.LOGGING_PREFIX + httpGet.toString());
 
         final String body;
-        try (CloseableHttpClient httpclient = createHttpClient();
+        try (CloseableHttpClient httpclient = this.createHttpClient();
                 CloseableHttpResponse response = httpclient.execute(httpGet);
                 ) {
                 body = EntityUtils.toString(response.getEntity());
-                throwIfStatusNotOk(response, body);
+                this.throwIfStatusNotOk(response, body);
         } catch (final ConnectException e) {
             throw new MeasureApiCallException(e.getMessage());
         } catch (final Exception e) {
