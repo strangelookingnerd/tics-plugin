@@ -46,6 +46,16 @@ Below is an example of executing a Run TICS build step through declarative pipel
             stage('Run Tics') {
               steps {
                 runTics (
+                  // If 'installTics' is set to true then the TICS command-line tools will be installed.
+                  // It is available from TICS Viewer version 2021.4.x and above.
+                  // For older versions, TICS should be installed manually on the machine that runs this job.
+                  installTics: true,                              // Optional parameter
+                  
+                  // If 'installTics' is set to true then the TICS environment variable should also be set.
+                  // Τhe TICS environment variable is a URL pointing to the 'cfg' API endpoint of the TICS Viewer.
+                  // This URL contains the name of the TICS Analyzer Configuration or '-' in case of the default configuration.
+                  ticsEnvVariable: 'https://192.168.1.1/tiobeweb/TICS/api/cfg?name=-',       // Optional parameter
+
                   projectName: 'projectName',                     // Mandatory parameter (case sensitive)
                   branchName: 'master',                           // Mandatory parameter (case sensitive)
 

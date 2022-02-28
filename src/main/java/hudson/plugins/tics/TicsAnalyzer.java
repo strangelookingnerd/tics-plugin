@@ -2,18 +2,33 @@ package hudson.plugins.tics;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.verb.POST;
 
+import com.cloudbees.plugins.credentials.CredentialsMatcher;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
@@ -30,15 +45,19 @@ import hudson.Launcher.ProcStarter;
 import hudson.Proc;
 import hudson.Util;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.plugins.tics.TicsPublisher.InvalidTicsViewerUrl;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
-
 
 public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     static final String LOGGING_PREFIX = "[TICS Analyzer] ";
@@ -55,6 +74,9 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     public final String extraArguments;
     public final Metrics calc;
     public final Metrics recalc;
+    public boolean installTics;
+    public final String ticsEnvVariable;
+//    public final String credentialsId;
 
     /**
      * This annotation tells Hudson to call this constructor, with values from the configuration form page with matching parameter names.
@@ -65,16 +87,19 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     @DataBoundConstructor
     public TicsAnalyzer(
             final String ticsPath
-            ,final String ticsConfiguration
-            ,final String projectName
-            ,final String branchName
-            ,final String branchDirectory
-            ,final String environmentVariables
-            ,final boolean createTmpdir
-            ,final String tmpdir
-            ,final String extraArguments
-            ,final Metrics calc
-            ,final Metrics recalc
+            , final String ticsConfiguration
+            , final String projectName
+            , final String branchName
+            , final String branchDirectory
+            , final String environmentVariables
+            , final boolean createTmpdir
+            , final String tmpdir
+            , final String extraArguments
+            , final Metrics calc
+            , final Metrics recalc
+            , boolean installTics
+            , final String ticsEnvVariable
+            //, final String credentialsId
             ) {
         this.ticsPath = ticsPath;
         this.ticsConfiguration = ticsConfiguration;
@@ -87,6 +112,9 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         this.extraArguments = extraArguments;
         this.calc = calc == null ? new Metrics() : calc;
         this.recalc = recalc == null ? new Metrics() : recalc;
+        this.installTics = installTics;
+        this.ticsEnvVariable = ticsEnvVariable;
+        //this.credentialsId = credentialsId;
     }
 
     @Override
@@ -95,17 +123,28 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         final PrintStream logger = listener.getLogger();
         try {
             final EnvVars buildEnv = run.getEnvironment(listener);
+            String installTicsApiFullUrl = "";
             int exitCode;
 
-            if (!Strings.isNullOrEmpty(branchDirectory)) {
-                exitCode = setBranchDirUsingTicsMaintenance(run, launcher, listener, buildEnv);
-                if (exitCode != 0) {
-                    logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
-                    throw new RuntimeException(LOGGING_PREFIX + errorPrefix + exitCode);
+            if (installTics) {
+                final String tiobeWebBaseUrl;
+                final String ticsInstallApiBaseUrl;
+
+                try {
+                    tiobeWebBaseUrl = ValidationHelper.getTiobewebBaseUrlFromGivenUrl(ticsEnvVariable);
+                    ticsInstallApiBaseUrl = getInstallTicsApiUrl(tiobeWebBaseUrl, getNodeOs(launcher));
+                } catch (final InvalidTicsViewerUrl | URISyntaxException ex) {
+                    ex.printStackTrace(listener.getLogger());
+                    throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
                 }
+
+//                final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), this.credentialsId);
+                final InstallTicsApiCall installTicsApiCall = new InstallTicsApiCall(ticsInstallApiBaseUrl, Optional.empty(), listener);
+                final String installTicsApiData = installTicsApiCall.retrieveInstallTics();
+                installTicsApiFullUrl = tiobeWebBaseUrl + installTicsApiData;
             }
 
-            exitCode = launchTicsQServer(run, launcher, listener, buildEnv);
+            exitCode = launchTicsQServer(installTicsApiFullUrl, run, launcher, listener, buildEnv);
             if (exitCode != 0) {
                 logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
                 throw new RuntimeException(LOGGING_PREFIX + errorPrefix + exitCode);
@@ -116,12 +155,10 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
     }
 
-
-
     /** Prefixes given command with location of TICS, if available */
     private String getFullyQualifiedPath(final String command) {
-        String path = MoreObjects.firstNonNull(ticsPath,"").trim();
-        if ("".equals(path)) {
+        String path = MoreObjects.firstNonNull(ticsPath, "").trim();
+        if ("".equals(path) || installTics) {
             return command;
         }
         // Note: we do not use new File(), because we do not want use the local FileSystem
@@ -131,32 +168,41 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return path + command;
     }
 
-    private int setBranchDirUsingTicsMaintenance(final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
-        final List<String> args = Lists.newArrayList();
-        args.add(getFullyQualifiedPath("TICSMaintenance"));
-        args.add("-project");
-        args.add(Util.replaceMacro(projectName, buildEnv));
-        args.add("-branchname");
-        args.add(Util.replaceMacro(branchName, buildEnv));
-        args.add("-branchdir");
-        args.add(Util.replaceMacro(branchDirectory, buildEnv));
-        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmds(args).envs(getEnvMap(buildEnv));
+    int launchTicsQServer(final String url, final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
+        final ArgumentListBuilder args = getTicsQServerArgs(buildEnv);
+        ProcStarter starter;
+
+        if (installTics) {
+            final String argsToString = args.toList().stream().collect(Collectors.joining(" "));
+            String escaped = StringEscapeUtils.escapeXSI(argsToString);
+            starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(bootstrapAndRunTics(url, escaped, launcher)).envs(getEnvMap(buildEnv));
+        } else {
+            starter = launcher.new ProcStarter().stdout(listener).cmds(args).envs(getEnvMap(buildEnv));
+        }
+
         final Proc proc = launcher.launch(starter);
         final int exitCode = proc.join();
         return exitCode;
     }
 
-    int launchTicsQServer(final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
+    private ArgumentListBuilder getTicsQServerArgs(final EnvVars buildEnv) {
         final ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(getFullyQualifiedPath("TICSQServer"));
+
         if (isNotEmpty(projectName)) {
             args.add("-project");
-            args.add(Util.replaceMacro(projectName, buildEnv));
+            args.add(Util.replaceMacro(StringEscapeUtils.escapeXSI(projectName), buildEnv));
         }
         if (isNotEmpty(branchName)) {
             args.add("-branchname");
             args.add(Util.replaceMacro(branchName, buildEnv));
         }
+
+        if (!Strings.isNullOrEmpty(branchDirectory)) {
+            args.add("-branchdir");
+            args.add(Util.replaceMacro(StringEscapeUtils.escapeXSI(branchDirectory), buildEnv));
+        }
+
         if (createTmpdir && isNotEmpty(tmpdir)) {
             args.add("-tmpdir");
             args.add(Util.replaceMacro(tmpdir.trim(), buildEnv));
@@ -166,10 +212,34 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
         addMetrics(args, "-calc", calc);
         addMetrics(args, "-recalc", recalc);
-        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmds(args).envs(getEnvMap(buildEnv));
-        final Proc proc = launcher.launch(starter);
-        final int exitCode = proc.join();
-        return exitCode;
+
+        return args;
+    }
+
+    private String bootstrapAndRunTics(final String url, final String args, final Launcher launcher) {
+        final String os = getNodeOs(launcher);
+        switch (os) {
+        case "linux":
+            return "bash -c \"source <(curl -s \'" + url + "\') ; " + args + "\"";
+        case "windows":
+            return "powershell \"Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "')) ; " + args + "\"";
+        }
+        throw new UnsupportedOperationException("Unsupported platform: " + os);
+    }
+
+    private String getInstallTicsApiUrl(final String tiobewebBaseUrl, final String os) throws URISyntaxException {
+        URIBuilder builder = new URIBuilder(ticsEnvVariable)
+                .addParameter("platform", os)
+                .addParameter("url", tiobewebBaseUrl);
+        return builder.build().toString();
+    }
+
+    private String getNodeOs(final Launcher launcher) {
+        if (launcher.isUnix()) {
+            return "linux";
+        }
+
+        return "windows";
     }
 
     private static boolean isNotEmpty(final String arg) {
@@ -193,15 +263,31 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 out.put(splitted.get(0).trim(), Util.replaceMacro(splitted.get(1).trim(), buildEnv));
             }
         }
+
         if (isNotEmpty(ticsConfiguration)) {
             out.put("TICS", Util.replaceMacro(ticsConfiguration, buildEnv));
         }
         return out;
     }
 
+    static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final Job<?, ?> job, final String credentialsId) {
+        if (Strings.isNullOrEmpty(credentialsId)) {
+            return Optional.empty();
+        }
+
+        final List<DomainRequirement> domainRequirements = Collections.<DomainRequirement>emptyList();
+        final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, job, ACL.SYSTEM, domainRequirements);
+        for (final StandardUsernamePasswordCredentials c : list) {
+            if (credentialsId.equals(c.getId())) {
+                return Optional.of(c);
+            }
+        }
+        return Optional.empty();
+    }
+
     @Override
     public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     @Extension
@@ -224,6 +310,30 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         public boolean configure(final StaplerRequest staplerRequest, final JSONObject json) throws FormException {
             save();
             return true; // indicate that everything is good so far
+        }
+
+        /** Called by Jenkins to fill credentials dropdown list */
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String credentialsId) {
+            final List<DomainRequirement> domainRequirements;
+            final CredentialsMatcher credentialsMatcher = CredentialsMatchers.anyOf(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
+            final StandardListBoxModel result = new StandardListBoxModel();
+            if (context == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            } else {
+                if (!context.hasPermission(Item.CONFIGURE)) {
+                    return result.includeCurrentValue(credentialsId);
+                }
+            }
+            if (credentialsId == null) {
+                domainRequirements = Collections.<DomainRequirement>emptyList();
+            } else {
+                domainRequirements = URIRequirementBuilder.fromUri(credentialsId.trim()).build();
+            }
+            return result
+                    .includeEmptyValue()
+                    .includeMatchingAs(ACL.SYSTEM, context, StandardCredentials.class, domainRequirements, credentialsMatcher);
         }
 
         @POST
@@ -262,6 +372,43 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             if (createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
                 return FormValidation.error("Please provide a directory");
             }
+            return FormValidation.ok();
+        }
+
+        @POST
+        public FormValidation doCheckTicsEnvVariable(@AncestorInPath final Item item,  @AncestorInPath final TaskListener listener, @QueryParameter final String value) {
+            if (item == null) { // no context
+                return FormValidation.ok();
+            }
+            item.checkPermission(Item.CONFIGURE);
+
+            Optional<FormValidation> validation = ValidationHelper.checkViewerUrlIsEmpty(value);
+            if (validation.isPresent()) {
+                return validation.get();
+            }
+
+            final Pattern urlPattern = Pattern.compile("[^:/]+://[^/]+/[^/]+/[^/]+/api/cfg\\?name=.+");
+            final String urlErrorExample = "http(s)://hostname/tiobeweb/section/api/cfg?name=configurationΝame";
+            validation = ValidationHelper.checkViewerUrlPattern(value, urlPattern, urlErrorExample);
+            if (validation.isPresent()) {
+                return validation.get();
+            }
+
+            validation = ValidationHelper.checkViewerBaseUrlAccessibility(value);
+            if (validation.isPresent()) {
+                return validation.get();
+            }
+
+            validation = ValidationHelper.checkVersionCompatibility(listener, value);
+            if (validation.isPresent()) {
+                return validation.get();
+            }
+            
+            validation = ValidationHelper.checkViewerUrlForWarningsCommon(value);
+            if (validation.isPresent()) {
+                return validation.get();
+            }
+
             return FormValidation.ok();
         }
 

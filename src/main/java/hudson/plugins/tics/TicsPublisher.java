@@ -3,17 +3,13 @@ package hudson.plugins.tics;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -28,13 +24,9 @@ import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -243,36 +235,24 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
         /** Helper method to check whether URL points to a TICS Viewer, in which case it returns Optional.absent(). */
         private static Optional<FormValidation> checkViewerUrlForErrorsCommon(final String url) {
-            if (Strings.isNullOrEmpty(url)) {
-                return Optional.of(FormValidation.error("Field is required"));
-            }
-            if (!url.matches("[^:/]+://[^/]+/[^/]+/[^/]+/?")) {
-                return Optional.of(FormValidation.errorWithMarkup("URL should be of the form <code>http(s)://hostname/tiobeweb/section</code>"));
+            final Pattern urlPattern = Pattern.compile("[^:/]+://[^/]+/[^/]+/[^/]+/?");
+            final String urlErrorExample = "http(s)://hostname/tiobeweb/section/";
+
+            Optional<FormValidation> validation = ValidationHelper.checkViewerUrlIsEmpty(url);
+            if (validation.isPresent()) {
+                return validation;
             }
 
-            try {
-                final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(url));
-                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
-                final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, Optional.empty());
-                apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, "HIE://", "none");
-                return Optional.empty();
-            } catch (final MeasureApiCallException | UnsupportedEncodingException e) {
-                return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
-            } catch (final InvalidTicsViewerUrl e) {
-                return Optional.of(FormValidation.errorWithMarkup(e.getMessage()));
+            validation = ValidationHelper.checkViewerUrlPattern(url, urlPattern, urlErrorExample);
+            if (validation.isPresent()) {
+                return validation;
             }
-        }
 
-        private static Optional<FormValidation> checkViewerUrlForWarningsCommon(final String value) {
-            final String host;
-            try {
-                host = new URIBuilder(value).getHost();
-            } catch (final URISyntaxException e) {
-                return Optional.empty();
+            validation = ValidationHelper.checkViewerBaseUrlAccessibility(url);
+            if (validation.isPresent()) {
+                return validation;
             }
-            if (host.equals("localhost") || host.equals("127.0.0.1")) {
-                return Optional.of(FormValidation.warning("Please provide a publicly accessible host, instead of " + host));
-            }
+
             return Optional.empty();
         }
 
@@ -284,7 +264,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             if (validation.isPresent()) {
                 return validation.get();
             }
-            validation = checkViewerUrlForWarningsCommon(value);
+            validation = ValidationHelper.checkViewerUrlForWarningsCommon(value);
             if (validation.isPresent()) {
                 return validation.get();
             }
@@ -356,7 +336,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
             try {
                 final EnvVars envvars = project.getEnvironment(null, listener);
-                final String measureApiUrl = getMeasureApiUrl(getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
+                final String measureApiUrl = ValidationHelper.getMeasureApiUrl(ValidationHelper.getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
                 final Optional<StandardUsernamePasswordCredentials> creds = getStandardUsernameCredentials(project, credentialsId);
                 final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
                 final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, creds);
@@ -410,10 +390,6 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
-    public static String getMeasureApiUrl(final String tiobewebBaseUrl) {
-        return tiobewebBaseUrl + "/api/public/v1/Measure";
-    }
-
     /** Returns the tiobeweb URL based on the configured viewer url, tries project setting first, then global setting.
      * Example: "http://192.168.1.88:42506/tiobeweb/default"
      * @throws InvalidTicsViewerUrl */
@@ -425,22 +401,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
         if (!optUrl.isPresent()) {
             throw new InvalidTicsViewerUrl("TICS Viewer URL was not configured at project level or globally.");
         }
-        return getTiobewebBaseUrlFromGivenUrl(optUrl.get());
-    }
-
-
-    public static String getTiobewebBaseUrlFromGivenUrl(final String arg0) throws InvalidTicsViewerUrl {
-        final String url = StringUtils.stripEnd(arg0, "/");
-
-        final ArrayList<String> parts = Lists.newArrayList(Splitter.on("/").split(url));
-        if (parts.size() < 3) {
-            throw new InvalidTicsViewerUrl("Missing host name in TICS Viewer URL");
-        }
-        if (parts.size() < 5) {
-            throw new InvalidTicsViewerUrl("Missing section name in TICS Viewer URL");
-        }
-        parts.set(3, "tiobeweb"); // change TIOBEPortal to tiobeweb
-        return Joiner.on("/").join(parts.subList(0, 5) /* include section name */);
+        return ValidationHelper.getTiobewebBaseUrlFromGivenUrl(optUrl.get());
     }
 
 
