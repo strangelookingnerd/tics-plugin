@@ -1,13 +1,16 @@
 package hudson.plugins.tics;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
@@ -27,7 +30,7 @@ public class QualityGateApiCall extends AbstractApiCall {
 
     public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, final Optional<StandardUsernamePasswordCredentials> credentials, final TaskListener listener) {
         super(LOGGING_PREFIX, listener.getLogger(), credentials);
-        final String projectAndBranch = ticsPath.split("://")[1];
+        final String projectAndBranch = StringUtils.stripEnd(ticsPath, "/").split("://")[1];
         final String[] parts = projectAndBranch.split("/", 2);
         this.project = parts[0];
         this.branch = parts[1];
@@ -35,7 +38,16 @@ public class QualityGateApiCall extends AbstractApiCall {
     }
 
     public QualityGateData retrieveQualityGateData() {
-        final String url = this.qualityGateUrl + "?project=" + this.project + "&branch=" + this.branch;
+        final String url;
+        try {
+            final URIBuilder builder = new URIBuilder(this.qualityGateUrl)
+                .setParameter("project", this.project)
+                .setParameter("branch", this.branch);
+            url = builder.build().toString();
+        } catch (final URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URL: " + e.getMessage());
+        }
+
         final String response = this.performHttpRequest(url);
 
         final QualityGateApiResponse resp = new Gson().fromJson(response, QualityGateApiResponse.class);
