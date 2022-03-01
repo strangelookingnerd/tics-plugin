@@ -97,60 +97,58 @@ table.table-gate td {
       <div>Measured at ${it.formatDate(it.tqiData.measurementDate)}</div>
     </j:otherwise>
   </j:choose>
-
-  <j:choose>
-    <table style="width: 100%; margin-top: 20px;">
-      <tr>
-        <td rowspan="2" style="width: 76px; vertical-align: middle;">
-          <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
-        </td>
-        <td><b>Quality Gate Summary</b></td>
-      </tr>
-    </table>
-
-    <j:when test="${it.gateData == null}">
-      No results available. TICS Quality Indicators will be collected during the next build.
-    </j:when>
-    <j:when test="${it.gateData.errorMessage != null}">
-      ${it.gateData.errorMessage}
-    </j:when>
-    <j:otherwise>
-      <p>
-        <b>Project: </b>
-        ${it.gateData.project}/${it.gateData.branch}
-      </p>
-      <p>${it.gateData.apiResponse.message}</p>
-      
-      <j:forEach var="gate" items="${it.gateData.apiResponse.gates}">
-        <div style="margin-top: 15px">
-          <div style="float: right; display: inline">
-            <img src="${rootURL}/plugin/tics/redFlag.png" width="30" height="20"/>
-            ${it.countConditions(gate, false)} failed
-            <img src="${rootURL}/plugin/tics/greenFlag.png" width="30" height="20"/>
-            ${it.countConditions(gate, true)} passed
-          </div>
-          <h4 style="margin-bottom: 6px">${gate.name}</h4>
-          <table style="border-spacing: 0px; border-collapse: collapse; margin-bottom: 20px"
-            class="table-gate"
-          >
-            <colgroup><col/><col style="width: 100%"/></colgroup>
-            <tbody>
-              <j:forEach var="condition" items="${gate.conditions}">
-                <tr>
-                  <td>
-                    <img src="${rootURL}/plugin/tics/${condition.passed ? 'green' : 'red'}Flag.png" width="30" height="20"/>
-                  </td>
-                  <td>${condition.message}</td>
-                </tr>
-              </j:forEach>
-            </tbody>
-          </table> 
-        </div>
-      </j:forEach>
   
-      <a target="_blank" href="${it.viewerQualityGateDetails}"> See results in TICS Viewer</a>
-      <div style="margin-bottom: 20px">Measured at ${it.formatDate(it.gateData.measurementDate)}</div>
-    </j:otherwise>
-  </j:choose>
+  <j:if test="${it.gateData != null}">
+     <j:choose>
+       <table style="width: 100%; margin-top: 20px;" >
+         <tr>
+           <td rowspan="2" style="width: 76px; vertical-align: middle;">
+             <img src="${rootURL}/plugin/tics/tics.png" style="margin-top: 2px"></img>
+           </td>
+           <td><b>Quality Gate Summary</b></td>
+         </tr>
+       </table>
+       <j:when test="${it.gateData.errorMessage != null}">
+         ${it.gateData.errorMessage}
+       </j:when>
+       <j:otherwise>
+         <p>
+           <b>Project: </b>
+           ${it.gateData.project}/${it.gateData.branch}
+         </p>
+         <p>${it.gateData.apiResponse.message}</p>
+         
+         <j:forEach var="gate" items="${it.gateData.apiResponse.gates}">
+           <div style="margin-top: 15px">
+             <div style="float: right; display: inline">
+               <img src="${rootURL}/plugin/tics/redFlag.png" width="30" height="20"/>
+               ${it.countConditions(gate, false)} failed
+               <img src="${rootURL}/plugin/tics/greenFlag.png" width="30" height="20"/>
+               ${it.countConditions(gate, true)} passed
+             </div>
+             <h4 style="margin-bottom: 6px">${gate.name}</h4>
+             <table style="border-spacing: 0px; border-collapse: collapse; margin-bottom: 20px"
+               class="table-gate"
+             >
+               <colgroup><col/><col style="width: 100%"/></colgroup>
+               <tbody>
+                 <j:forEach var="condition" items="${gate.conditions}">
+                   <tr>
+                     <td>
+                       <img src="${rootURL}/plugin/tics/${condition.passed ? 'green' : 'red'}Flag.png" width="30" height="20"/>
+                     </td>
+                     <td>${condition.message}</td>
+                   </tr>
+                 </j:forEach>
+               </tbody>
+             </table> 
+           </div>
+         </j:forEach>
+     
+         <a target="_blank" href="${it.viewerQualityGateDetails}"> See results in TICS Viewer</a>
+         <div style="margin-bottom: 20px">Measured at ${it.formatDate(it.gateData.measurementDate)}</div>
+       </j:otherwise>
+     </j:choose>
+  </j:if>
 
 </j:jelly>
