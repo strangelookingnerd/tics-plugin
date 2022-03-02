@@ -7,7 +7,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -30,7 +29,7 @@ public class QualityGateApiCall extends AbstractApiCall {
 
     public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, final Optional<StandardUsernamePasswordCredentials> credentials, final TaskListener listener) {
         super(LOGGING_PREFIX, listener.getLogger(), credentials);
-        final String projectAndBranch = StringUtils.stripEnd(ticsPath, "/").split("://")[1];
+        final String projectAndBranch = ticsPath.split("://")[1];
         final String[] parts = projectAndBranch.split("/", 2);
         this.project = parts[0];
         this.branch = parts[1];

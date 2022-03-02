@@ -5,6 +5,7 @@ import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -14,6 +15,8 @@ import org.apache.http.util.EntityUtils;
 
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
@@ -57,7 +60,7 @@ public class MeasureApiCall extends AbstractApiCall {
         URIBuilder builder;
         try {
             builder = new URIBuilder(this.measureApiUrl)
-                .setParameter("nodes", paths)
+                .setParameter("nodes", convertToPathSyntax(paths))
                 .setParameter("metrics", metrics);
         } catch (final URISyntaxException e) {
             throw new MeasureApiCallException("Invalid URL: " + e.getMessage());
@@ -94,6 +97,24 @@ public class MeasureApiCall extends AbstractApiCall {
             throw new RuntimeException("Error parsing json: " + body, ex);
         }
     }
+    
+    private String convertToPathSyntax(final String ticsPath) {
+        List<String> ticsPathParts = Lists.newArrayList(Splitter.on("://").split(ticsPath));
 
+        if (ticsPathParts.size() < 2 ) {
+            return ticsPath;
+        }
+
+        List<String> projectAndBranch = Lists.newArrayList(Splitter.on("/").limit(2).split(ticsPathParts.get(1)))
+                .stream()
+                .map(el -> el.replace("([(),])", "\\$1"))
+                .collect(Collectors.toList());
+
+        if (projectAndBranch.size() < 2) {
+            return ticsPath;
+        }
+
+        return "Path("+ ticsPathParts.get(0) + "," + projectAndBranch.get(0)+ "," + projectAndBranch.get(1) + ")";
+    }
 
 }

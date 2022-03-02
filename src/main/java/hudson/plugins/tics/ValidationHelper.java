@@ -100,14 +100,14 @@ public class ValidationHelper {
     }
 
     private static List<Integer> parseVersion(final String version) {
-        List<Integer> parts = Splitter.on(".").splitToList(version)
+        List<Integer> parts = Lists.newArrayList(Splitter.on(".").split(version))
                 .stream()
                 .map(p -> Ints.tryParse(p))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        if (parts.size() != 2) {
-            throw new IllegalArgumentException("Cannot parse: " + version);
+        if (parts.size() < 2) {
+            throw new IllegalArgumentException("There was a problem parsing the TICS Viewer version: " + version);
         }
 
         return parts;
