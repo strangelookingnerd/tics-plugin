@@ -49,7 +49,7 @@ Below is an example of executing a Run TICS build step through declarative pipel
                   // If 'installTics' is set to true then the TICS command-line tools will be installed.
                   // It is available from TICS Viewer version 2021.4.x and above.
                   // For older versions, TICS should be installed manually on the machine that runs this job.
-                  installTics: true,                              // Optional parameter
+                  installTics: true,                              // Optional boolean parameter
                   
                   // If 'installTics' is set to true then the TICS environment variable should also be set.
                   // Τhe TICS environment variable is a URL pointing to the 'cfg' API endpoint of the TICS Viewer.
@@ -68,11 +68,12 @@ Below is an example of executing a Run TICS build step through declarative pipel
                   ticsConfiguration: 'C:/Program Files (x86)/TIOBE/TICS/FileServer/cfg',    // Optional parameter
                   environmentVariables: [                                                   // Optional parameter
                       "TICSCHKPATH" : "C:/Program Files (x86)/TIOBE/TICS/FileServer/chk",
+                      "PATH": "C:\Tools\bin;$PATH"                                          // Example of how to insert a new path at the beginning of $PATH environment variable.
                       ...
                   ],
                   extraArguments: '',                                                       // Optional parameter
                   tmpdir: '',                                                               // Optional parameter
-                  branchDirectory: '',                                                      // Optional parameter
+                  branchDirectory: '${WORKSPACE}',                                          // Optional parameter. ${WORKSPACE} points to the default Jenkins workspace location.
                 )
               }
             }
@@ -132,3 +133,4 @@ Notes on pipelines
           catch (e) {
             // continue execution
           }
+
