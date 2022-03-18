@@ -198,6 +198,16 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     public void setEnvironmentVariables(final LinkedHashMap<String, String> value) {
         this.environmentVariables = value;
     }
+    
+    @DataBoundSetter
+    public void setInstallTics(final boolean value) {
+        this.installTics = value;
+    }
+    
+    @DataBoundSetter
+    public void setTicsEnvVariable(final String value) {
+        this.ticsEnvVariable = value;
+    }
 
     @Symbol("runTics") @Extension
     public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
