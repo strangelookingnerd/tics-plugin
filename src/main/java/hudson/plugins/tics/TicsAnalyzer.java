@@ -3,6 +3,7 @@ package hudson.plugins.tics;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
+import javax.sound.sampled.Line;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -36,7 +38,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -144,7 +145,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 installTicsApiFullUrl = tiobeWebBaseUrl + installTicsApiData;
             }
 
-            exitCode = launchTicsQServer(installTicsApiFullUrl, run, launcher, listener, buildEnv);
+            exitCode = launchTicsQServer(installTicsApiFullUrl, run, launcher, listener, buildEnv, workspace);
             if (exitCode != 0) {
                 logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
                 throw new RuntimeException(LOGGING_PREFIX + errorPrefix + exitCode);
@@ -168,20 +169,19 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return path + command;
     }
 
-    int launchTicsQServer(final String url, final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
-        final ArgumentListBuilder args = getTicsQServerArgs(buildEnv);
-        ProcStarter starter;
+    int launchTicsQServer(final String url, final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
 
-        if (installTics) {
-            final String argsToString = args.toList().stream().collect(Collectors.joining(" "));
-            String escaped = StringEscapeUtils.escapeXSI(argsToString);
-            starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(bootstrapAndRunTics(url, escaped, launcher)).envs(getEnvMap(buildEnv));
-        } else {
-            starter = launcher.new ProcStarter().stdout(listener).cmds(args).envs(getEnvMap(buildEnv));
-        }
+        final String bootstrapCommand =  installTics ? getBootstrapCmd(url, launcher) : "";
+        final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv);
+
+        final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
+        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher)).envs(getEnvMap(buildEnv));
 
         final Proc proc = launcher.launch(starter);
         final int exitCode = proc.join();
+
+        scriptPath.delete();
+
         return exitCode;
     }
 
@@ -191,7 +191,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         if (isNotEmpty(projectName)) {
             args.add("-project");
-            args.add(Util.replaceMacro(StringEscapeUtils.escapeXSI(projectName), buildEnv));
+            args.add(Util.replaceMacro(projectName, buildEnv));
         }
         if (isNotEmpty(branchName)) {
             args.add("-branchname");
@@ -200,7 +200,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         if (!Strings.isNullOrEmpty(branchDirectory)) {
             args.add("-branchdir");
-            args.add(Util.replaceMacro(StringEscapeUtils.escapeXSI(branchDirectory), buildEnv));
+            args.add(Util.replaceMacro(branchDirectory, buildEnv));
         }
 
         if (createTmpdir && isNotEmpty(tmpdir)) {
@@ -216,30 +216,54 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return args;
     }
 
-    private String bootstrapAndRunTics(final String url, final String args, final Launcher launcher) {
-        final String os = getNodeOs(launcher);
-        switch (os) {
-        case "linux":
-            return "bash -c \"source <(curl -s \'" + url + "\') ; " + args + "\"";
-        case "windows":
-            return "powershell \"Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "')) ; " + args + "\"";
+    private String getBootstrapCmd(final String url, final Launcher launcher) {
+        final boolean isLinux = launcher.isUnix(); 
+        if (isLinux) {
+            return ". <(curl --silent --show-error \'" + url + "\' )";
+        } else {
+            return "powershell \"Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))\"";
         }
-        throw new UnsupportedOperationException("Unsupported platform: " + os);
+    }
+
+    private String runScript(final String file, final Launcher launcher) {
+        final boolean isLinux = launcher.isUnix();
+
+        if (isLinux) {
+            return "bash " + file;
+        } else {
+            return "powershell -NoProfile -ExecutionPolicy Bypass -Command \" & '" + file +  "'\"";
+        }
+    }
+
+    private FilePath createScript(final FilePath workspace, final String bootstrapCmd, final ArgumentListBuilder ticsAnalysisCmd, final Launcher launcher) throws IOException, InterruptedException {
+        final boolean isLinux = launcher.isUnix();
+
+        final String scriptSuffix =  isLinux ? ".sh" : ".ps1";
+        final String scriptContentStart = isLinux ? "#!/bin/bash" : "";
+        final String ticsAnalysisCmdEscaped = isLinux 
+                ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" ")) 
+                : ticsAnalysisCmd.toWindowsCommand().toString();
+
+        FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
+
+        String contents = scriptContentStart + " \n"
+                + bootstrapCmd + "\n"
+                + ticsAnalysisCmdEscaped;
+
+        createTempFile.write(contents, "UTF-8");
+
+        return createTempFile;
     }
 
     private String getInstallTicsApiUrl(final String tiobewebBaseUrl, final String os) throws URISyntaxException {
-        URIBuilder builder = new URIBuilder(ticsEnvVariable)
+        final URIBuilder builder = new URIBuilder(ticsEnvVariable)
                 .addParameter("platform", os)
                 .addParameter("url", tiobewebBaseUrl);
         return builder.build().toString();
     }
 
     private String getNodeOs(final Launcher launcher) {
-        if (launcher.isUnix()) {
-            return "linux";
-        }
-
-        return "windows";
+        return launcher.isUnix() ? "linux" : "windows";
     }
 
     private static boolean isNotEmpty(final String arg) {
