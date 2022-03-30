@@ -2,8 +2,9 @@ package hudson.plugins.tics;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
-import javax.sound.sampled.Line;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -22,6 +22,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.verb.POST;
+
 
 import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -75,8 +76,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     public final String extraArguments;
     public final Metrics calc;
     public final Metrics recalc;
-    public boolean installTics;
-    public final String ticsEnvVariable;
+    public final boolean installTics;
 //    public final String credentialsId;
 
     /**
@@ -98,8 +98,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             , final String extraArguments
             , final Metrics calc
             , final Metrics recalc
-            , boolean installTics
-            , final String ticsEnvVariable
+            , final boolean installTics
             //, final String credentialsId
             ) {
         this.ticsPath = ticsPath;
@@ -114,7 +113,6 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         this.calc = calc == null ? new Metrics() : calc;
         this.recalc = recalc == null ? new Metrics() : recalc;
         this.installTics = installTics;
-        this.ticsEnvVariable = ticsEnvVariable;
         //this.credentialsId = credentialsId;
     }
 
@@ -132,7 +130,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 final String ticsInstallApiBaseUrl;
 
                 try {
-                    tiobeWebBaseUrl = ValidationHelper.getTiobewebBaseUrlFromGivenUrl(ticsEnvVariable);
+                    tiobeWebBaseUrl = ValidationHelper.getTiobewebBaseUrlFromGivenUrl(ticsConfiguration);
                     ticsInstallApiBaseUrl = getInstallTicsApiUrl(tiobeWebBaseUrl, getNodeOs(launcher));
                 } catch (final InvalidTicsViewerUrl | URISyntaxException ex) {
                     ex.printStackTrace(listener.getLogger());
@@ -246,7 +244,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
 
-        String contents = scriptContentStart + " \n"
+        String contents = scriptContentStart + "\n"
                 + bootstrapCmd + "\n"
                 + ticsAnalysisCmdEscaped;
 
@@ -256,7 +254,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     private String getInstallTicsApiUrl(final String tiobewebBaseUrl, final String os) throws URISyntaxException {
-        final URIBuilder builder = new URIBuilder(ticsEnvVariable)
+        final URIBuilder builder = new URIBuilder(ticsConfiguration)
                 .addParameter("platform", os)
                 .addParameter("url", tiobewebBaseUrl);
         return builder.build().toString();
@@ -290,6 +288,10 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         if (isNotEmpty(ticsConfiguration)) {
             out.put("TICS", Util.replaceMacro(ticsConfiguration, buildEnv));
+        }
+
+        if (isNotEmpty(ticsPath)) {
+            out.put("TICSINSTALLDIR", Util.replaceMacro(ticsPath, buildEnv));
         }
         return out;
     }
@@ -400,7 +402,8 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckTicsEnvVariable(@AncestorInPath final Item item,  @AncestorInPath final TaskListener listener, @QueryParameter final String value) {
+        public FormValidation doCheckTicsConfiguration(@AncestorInPath final Item item,  @AncestorInPath final TaskListener listener, @QueryParameter final String value, 
+                @QueryParameter("installTics") final boolean installTics) {
             if (item == null) { // no context
                 return FormValidation.ok();
             }
@@ -411,30 +414,44 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 return validation.get();
             }
 
-            final Pattern urlPattern = Pattern.compile("[^:/]+://[^/]+/[^/]+/[^/]+/api/cfg\\?name=.+");
-            final String urlErrorExample = "http(s)://hostname/tiobeweb/section/api/cfg?name=configurationΝame";
-            validation = ValidationHelper.checkViewerUrlPattern(value, urlPattern, urlErrorExample);
-            if (validation.isPresent()) {
-                return validation.get();
-            }
+            if (installTics || isUrlLike(value)) {
+                // This validation is performed if:
+                // 1. The user checked the checkbox to install TICS, in which case this value needs to be a URL
+                // 2. The user did not check the checkbox, but still filled in something that resembles a URL
+                // If the checkbox is not checked and the value is something else (probably a path), no check is performed.
+                final Pattern urlPattern = Pattern.compile("[^:/]+://[^/]+/[^/]+/[^/]+/api/cfg\\?name=.+");
+                final String urlErrorExample = "http(s)://hostname/tiobeweb/section/api/cfg?name=configurationΝame";
+                validation = ValidationHelper.checkViewerUrlPattern(value, urlPattern, urlErrorExample);
+                if (validation.isPresent()) {
+                    return validation.get();
+                }
 
-            validation = ValidationHelper.checkViewerBaseUrlAccessibility(value);
-            if (validation.isPresent()) {
-                return validation.get();
-            }
+                validation = ValidationHelper.checkViewerBaseUrlAccessibility(value);
+                if (validation.isPresent()) {
+                    return validation.get();
+                }
 
-            validation = ValidationHelper.checkVersionCompatibility(listener, value);
-            if (validation.isPresent()) {
-                return validation.get();
-            }
-            
-            validation = ValidationHelper.checkViewerUrlForWarningsCommon(value);
-            if (validation.isPresent()) {
-                return validation.get();
+                validation = ValidationHelper.checkVersionCompatibility(listener, value);
+                if (validation.isPresent()) {
+                    return validation.get();
+                }
+                
+                validation = ValidationHelper.checkViewerUrlForWarningsCommon(value);
+                if (validation.isPresent()) {
+                    return validation.get();
+                }
             }
 
             return FormValidation.ok();
         }
 
+        private boolean isUrlLike(final String url) {
+            try {
+                new URL(url).toURI();
+                return true;
+            } catch (MalformedURLException | URISyntaxException e) {
+                return false;
+            }
+        }
     }
 }

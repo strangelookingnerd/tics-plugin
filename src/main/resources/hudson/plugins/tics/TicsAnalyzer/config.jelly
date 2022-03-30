@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
   <script src="${rootURL}/plugin/tics/analyzer.js"/>
-  
+
   <f:block>
     <div>
       <p>
@@ -12,37 +12,18 @@
       </p>
     </div>
   </f:block>
-  
-  <f:radioBlock name="installTics" value="true" checked="${instance.installTics == true}" title="Install TICS command-line tools" inline="true">
-    <f:nested>
-        <f:entry title="TICS Environment Variable" field="ticsEnvVariable">
-          <f:textbox checkMethod="post" />
-        </f:entry>
-        
-        <!-- 
-        <f:entry title="${%Credentials}"
-        field="credentialsId"
-        description="Required only if TICS authentication is configured."
-        >
-          <c:select/>
-        </f:entry>
-         -->
 
-    </f:nested>
-  </f:radioBlock>
+  <f:entry title="Install TICS command-line tools" field="installTics">
+    <f:checkbox/>
+  </f:entry>
 
-  <f:radioBlock name="installTics" value="false" checked="${instance.installTics == false}" title="TICS is already installed" inline="true">
-    <f:nested>
+  <f:entry title="TICS Configuration directory" field="ticsConfiguration">
+    <f:textbox/>
+  </f:entry>
 
-      <f:entry title="Build Server installation path" field="ticsPath">
-        <f:textbox />
-      </f:entry>
-    
-      <f:entry title="TICS Configuration directory" field="ticsConfiguration">
-        <f:textbox/>
-      </f:entry>
-    </f:nested>
-  </f:radioBlock>
+  <f:entry title="Build Server installation path" field="ticsPath">
+    <f:textbox />
+  </f:entry>
 
   <f:entry title="Project name" field="projectName">
     <f:textbox checkMethod="post" />
@@ -63,13 +44,11 @@
         <f:textarea/>
       </f:entry>
 
-      <f:entry title="Output debug info (tmpdir)" field="createTmpdir">
-        <f:checkbox/>
-      </f:entry>
-
-      <f:entry title="Tmpdir location" field="tmpdir">
-        <f:textbox checkMethod="post" />
-      </f:entry>
+      <f:optionalBlock title="Output debug info (tmpdir)" field="createTmpdir" inline="true">
+         <f:entry title="Tmpdir location" field="tmpdir">
+            <f:textbox checkMethod="post" />
+         </f:entry>
+      </f:optionalBlock>
 
       <f:entry title="Metrics to calculate (-calc)" field="calc">
       </f:entry>
