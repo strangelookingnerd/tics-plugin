@@ -136,3 +136,25 @@ Notes on pipelines
             // continue execution
           }
 
+* If you are using Credentials Plugin along with TICS Jenkins plugin, please be aware of the following security issue. 
+  In a Groovy string, any secrets includude in the string will be interpolated before being processed for further use. This can allow other processes to accidentally expose the secret. For example: 
+
+  ```
+     // Insecure way
+     node {
+       withCredentials([usernamePassword(credentialsId: 'myid', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+           sh "echo $PASSWORD"
+       }
+     }
+   ```
+  To avoid this issue, the secrets should be used in single quotes so that they are expanded by the shell as an environment variable. For example:
+
+   ```
+     // Secure way
+     node {
+       withCredentials([usernamePassword(credentialsId: 'myid', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+           sh 'echo $PASSWORD'
+       }
+     }
+   ```
+  For more details please consult the [Credentials Binding Plugin](https://www.jenkins.io/doc/pipeline/steps/credentials-binding/) documentation page.
