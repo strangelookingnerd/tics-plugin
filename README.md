@@ -51,10 +51,12 @@ Below is an example of executing a Run TICS build step through declarative pipel
                   // For older versions, TICS should be installed manually on the machine that runs this job.
                   installTics: true,                              // Optional boolean parameter
                   
-                  // If 'installTics' is set to true then the TICS environment variable should also be set.
-                  // Τhe TICS environment variable is a URL pointing to the 'cfg' API endpoint of the TICS Viewer.
+                  // If 'installTics' is set to true then the TICS configuration should also be set.
+                  // Τhe TICS configuration is a URL pointing to the 'cfg' API endpoint of the TICS Viewer.
                   // This URL contains the name of the TICS Analyzer Configuration or '-' in case of the default configuration.
-                  ticsEnvVariable: 'https://192.168.1.1/tiobeweb/TICS/api/cfg?name=-',       // Optional parameter
+                  // For TICS installations using the legacy deployment architecture, TICS Configuration points to the configuration directory
+                  // e.g. C:\Program Files\TIOBE\TICS\FileServer\cfg
+                  ticsConfiguration: 'https://192.168.1.1/tiobeweb/TICS/api/cfg?name=-',       // Optional parameter
 
                   projectName: 'projectName',                     // Mandatory parameter (case sensitive)
                   branchName: 'master',                           // Mandatory parameter (case sensitive)
@@ -63,17 +65,17 @@ Below is an example of executing a Run TICS build step through declarative pipel
                   recalc: ['ABSTRACTINTERPRETATION', 'SECURITY'], // Optional parameter. Example of metrics that will be analyzed with 'recalc'.
 
                   // ticsBin is an Optional parameter.
-                  // If the TICS executables (TICSMaintenance, TICSQServer) can be found in the PATH environment variable, this parameter can be skipped.
-                  ticsBin: 'C:/Program Files (x86)/TIOBE/TICS/BuildServer',
-                  ticsConfiguration: 'C:/Program Files (x86)/TIOBE/TICS/FileServer/cfg',    // Optional parameter
+                  // This parameter can be skipped, if the TICS executables (TICSQServer) can be found in the PATH environment variable,
+                  // or if 'installTics' is set to true.
+                  ticsBin: 'C:/Program Files/TIOBE/TICS/BuildServer',
                   environmentVariables: [                                                   // Optional parameter
-                      "TICSCHKPATH" : "C:/Program Files (x86)/TIOBE/TICS/FileServer/chk",
+                      "TICSCHKPATH" : "C:/Program Files/TIOBE/TICS/FileServer/chk",
                       "PATH": "C:\Tools\bin;$PATH"                                          // Example of how to insert a new path at the beginning of $PATH environment variable.
                       ...
                   ],
                   extraArguments: '',                                                       // Optional parameter
                   tmpdir: '',                                                               // Optional parameter
-                  branchDirectory: '${WORKSPACE}',                                          // Optional parameter. ${WORKSPACE} points to the default Jenkins workspace location.
+                  branchDirectory: "${WORKSPACE}",                                          // Optional parameter. ${WORKSPACE} points to the default Jenkins workspace location.
                 )
               }
             }
