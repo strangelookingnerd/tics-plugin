@@ -170,7 +170,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     int launchTicsQServer(final String url, final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
 
         final String bootstrapCommand =  installTics ? getBootstrapCmd(url, launcher) : "";
-        final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv);
+        final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, launcher);
 
         final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
         final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher)).envs(getEnvMap(buildEnv));
@@ -183,9 +183,11 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return exitCode;
     }
 
-    private ArgumentListBuilder getTicsQServerArgs(final EnvVars buildEnv) {
+    private ArgumentListBuilder getTicsQServerArgs(final EnvVars buildEnv, final Launcher launcher) {
         final ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(getFullyQualifiedPath("TICSQServer"));
+        final String ticsQServer = "TICSQServer" + (launcher.isUnix() ? "" : ".exe");
+
+        args.add(getFullyQualifiedPath(ticsQServer));
 
         if (isNotEmpty(projectName)) {
             args.add("-project");
