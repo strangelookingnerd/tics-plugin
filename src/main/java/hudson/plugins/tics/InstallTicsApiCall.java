@@ -6,12 +6,11 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import hudson.model.TaskListener;
@@ -22,7 +21,7 @@ public class InstallTicsApiCall extends AbstractApiCall {
     private static final String LOGGING_PREFIX = "[TICS Install]";
     private final String installTicsUrl;
 
-    public InstallTicsApiCall(final String installTicsUrl, final Optional<StandardUsernamePasswordCredentials> credentials, final TaskListener listener) {
+    public InstallTicsApiCall(final String installTicsUrl, Optional<Pair<String, String>> credentials, final TaskListener listener) {
         super(LOGGING_PREFIX, listener.getLogger(), credentials);
         this.installTicsUrl = installTicsUrl;
     }

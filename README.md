@@ -50,13 +50,21 @@ Below is an example of executing a Run TICS build step through declarative pipel
                   // It is available from TICS Viewer version 2021.4.x and above.
                   // For older versions, TICS should be installed manually on the machine that runs this job.
                   installTics: true,                              // Optional boolean parameter
-                  
+
                   // If 'installTics' is set to true then the TICS configuration should also be set.
                   // Τhe TICS configuration is a URL pointing to the 'cfg' API endpoint of the TICS Viewer.
                   // This URL contains the name of the TICS Analyzer Configuration or '-' in case of the default configuration.
                   // For TICS installations using the legacy deployment architecture, TICS Configuration points to the configuration directory
                   // e.g. C:\Program Files\TIOBE\TICS\FileServer\cfg
                   ticsConfiguration: 'https://192.168.1.1/tiobeweb/TICS/api/cfg?name=-',       // Optional parameter
+
+                  // The 'credentialsId' is used to specify the credentials to be used when accessing the viewer.
+                  // It is only needed if TICS Viewer is not publicly accessible and requires an authentication token.
+                  // It is managed by the credentials plugin: https://plugins.jenkins.io/credentials
+                  // Through the credentials plugin, create a credential of type 'Secret Text', with the 'ID' of your choice and 
+                  // the 'Secret' to be equal to a TICS Viewer Authentication token of role 'TICS Analyzer' and 
+                  // configure the 'credentialsId' below accordingly.
+                  credentialsId: '',                                             // Optional parameter
 
                   projectName: 'projectName',                     // Mandatory parameter (case sensitive)
                   branchName: 'master',                           // Mandatory parameter (case sensitive)
@@ -98,12 +106,13 @@ Below is an example of executing Publish TICS results (TQI label) post build ste
                   checkQualityGate: false,                                  // Optional boolean parameter that defaults to false if not set. Enables TICS Quality Gate checks.
                   failIfQualityGateFails: false,                            // Optional boolean parameter that defaults to false if not set. Marks the build as failure if TICS Quality Gate fails for any reason.
 
-                  // 'userName' and 'userId' are used to specify the credentials to be used when accessing the viewer.
-                  // Those are only needed if the project specified in projectPath requires authentication.
-                  // These credentials are managed by the credentials plugin: https://plugins.jenkins.io/credentials
-                  // If the project requires authentication, please specify one or the other. userId is preferred as it is normally a unique id.
-                  userName: '',                                             // Optional parameter
-                  userId: '',                                               // Optional parameter
+                  // 'credentialsId' is used to specify the credentials to be used when accessing the viewer.
+                  // It is only needed if the project specified in projectPath requires authentication.
+                  // This is managed by the credentials plugin: https://plugins.jenkins.io/credentials
+                  // For this step two credentials types are supported: the 'Username with password' or 'Secret Text'.
+                  // For a credential of type 'Secret Text', the 'ID' is one of your choice and 
+                  // the 'Secret' should be equal to a TICS Viewer Authentication token of role 'TICS Analyzer'.
+                  credentialsId: '',                                        // Optional parameter
 
                   // Advanced parameters:
                   ticsProjectPath: 'HIE://PROJECT/BRANCH/COMPONENT',        // Optional parameter that can be used instead of 'projectName' and 'branchName'
@@ -136,14 +145,17 @@ Notes on pipelines
             // continue execution
           }
 
-* If you are using Credentials Plugin along with TICS Jenkins plugin, please be aware of the following security issue. 
-  In a Groovy string, any secrets includude in the string will be interpolated before being processed for further use. This can allow other processes to accidentally expose the secret. For example: 
+* If you are using Credentials Binding Plugin along with TICS Jenkins plugin, please be aware of the following security issue. 
+  In a Groovy string, any secrets include in the string will be interpolated before being processed for further use. This can allow other processes to accidentally expose the secret. For example: 
 
   ```
      // Insecure way
      node {
-       withCredentials([usernamePassword(credentialsId: 'myid', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-           sh "echo $PASSWORD"
+       withCredentials([string(credentialsId: 'mytoken', variable: 'TOKEN')]) {
+           sh '''
+             set +x
+             curl -H "Token: $TOKEN" https://some.api/
+           '''
        }
      }
    ```
@@ -152,8 +164,11 @@ Notes on pipelines
    ```
      // Secure way
      node {
-       withCredentials([usernamePassword(credentialsId: 'myid', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-           sh 'echo $PASSWORD'
+       withCredentials([string(credentialsId: 'myid', variable: 'TOKEN')]) {
+           sh '''
+             set +x
+             curl -H "Token: $TOKEN" https://some.api/
+           '''
        }
      }
    ```

@@ -7,12 +7,12 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.gson.Gson;
 
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
@@ -22,7 +22,7 @@ public class TicsVersionApiCall extends AbstractApiCall {
     private static final String LOGGING_PREFIX = "[TICS Version]";
     private final String ticsVersionUrl;
 
-    public TicsVersionApiCall(final String ticsVersionUrl, final Optional<StandardUsernamePasswordCredentials> credentials, final PrintStream logger) {
+    public TicsVersionApiCall(final String ticsVersionUrl, final Optional<Pair<String, String>> credentials, final PrintStream logger) {
         super(LOGGING_PREFIX, logger, credentials);
         this.ticsVersionUrl = ticsVersionUrl;
     }

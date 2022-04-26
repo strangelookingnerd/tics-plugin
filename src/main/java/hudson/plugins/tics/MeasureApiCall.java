@@ -7,13 +7,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
@@ -49,7 +48,7 @@ public class MeasureApiCall extends AbstractApiCall {
         }
     }
 
-    public MeasureApiCall(final PrintStream logger, final String measureApiUrl, final Optional<StandardUsernamePasswordCredentials> credentials) {
+    public MeasureApiCall(final PrintStream logger, final String measureApiUrl, Optional<Pair<String, String>> credentials) {
         super("[Measure API]", logger, credentials);
         Preconditions.checkState(measureApiUrl.endsWith("/Measure"));
         this.logger = logger;

@@ -3,27 +3,18 @@ package hudson.plugins.tics;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.verb.POST;
 
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -34,19 +25,16 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
-import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
-import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 
@@ -110,7 +98,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
-        final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), this.credentialsId);
+        final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(run.getParent(), credentialsId, run.getEnvironment(listener));
         final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(this.ticsPath), "Path not specified"), run.getEnvironment(listener));
 
         final String measureApiUrl;
@@ -125,12 +113,12 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
         }
 
-        final MeasureApiCall measureApiCall = new MeasureApiCall(listener.getLogger(), measureApiUrl, credentials);
+        final MeasureApiCall measureApiCall = new MeasureApiCall(listener.getLogger(), measureApiUrl, usernameAndPassword);
         final MetricData tqiData = getTqiMetricData(listener.getLogger(), ticsPath1, measureApiCall);
 
         QualityGateData gateData;
         if (checkQualityGate) {
-            final QualityGateApiCall qgApiCall = new QualityGateApiCall(qualityGateUrl, ticsPath1, credentials, listener);
+            final QualityGateApiCall qgApiCall = new QualityGateApiCall(qualityGateUrl, ticsPath1, usernameAndPassword, listener);
             gateData = retrieveQualityGateData(qgApiCall, listener, tiobeWebBaseUrl);
 
             if (!gateData.passed && this.failIfQualityGateFails) {
@@ -179,20 +167,6 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             listener.getLogger().println(LOGGING_PREFIX + Throwables.getStackTraceAsString(e));
             return QualityGateData.error("There was an error while retrieving the quality gate status. See the build log for more information.");
         }
-    }
-
-    static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final Job<?, ?> job, final String credentialsId) {
-        if (Strings.isNullOrEmpty(credentialsId)) {
-            return Optional.empty();
-        }
-        final List<DomainRequirement> domainRequirements = Collections.<DomainRequirement>emptyList();
-        final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, job, ACL.SYSTEM, domainRequirements);
-        for (final StandardUsernamePasswordCredentials c : list) {
-            if (credentialsId.equals(c.getId())) {
-                return Optional.of(c);
-            }
-        }
-        return Optional.empty();
     }
 
     @Override
@@ -335,13 +309,19 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             }
 
             try {
-                final EnvVars envvars = project.getEnvironment(null, listener);
-                final String measureApiUrl = ValidationHelper.getMeasureApiUrl(ValidationHelper.getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
-                final Optional<StandardUsernamePasswordCredentials> creds = getStandardUsernameCredentials(project, credentialsId);
-                final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
-                final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, creds);
-                apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, Util.replaceMacro(value, envvars), "none");
+                if (!Strings.isNullOrEmpty(credentialsId)) {
+                    final EnvVars envvars = project.getEnvironment(null, listener);
+                    final String measureApiUrl = ValidationHelper.getMeasureApiUrl(ValidationHelper.getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
+                    final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
+
+                    final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(project, credentialsId, envvars);
+                    final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, usernameAndPassword);
+                    apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, Util.replaceMacro(value, envvars), "none");
+                }
+
                 return FormValidation.ok();
+            } catch (final IllegalArgumentException e) {
+                return FormValidation.errorWithMarkup(e.getMessage());
             } catch (final MeasureApiCallException e) {
                 return FormValidation.errorWithMarkup(e.getMessage());
             } catch (final InvalidTicsViewerUrl e) {
@@ -361,26 +341,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
         /** Called by Jenkins to fill credentials dropdown list */
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String credentialsId) {
-            final List<DomainRequirement> domainRequirements;
-            final CredentialsMatcher credentialsMatcher = CredentialsMatchers.anyOf(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
-            final StandardListBoxModel result = new StandardListBoxModel();
-            if (context == null) {
-                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
-                    return result.includeCurrentValue(credentialsId);
-                }
-            } else {
-                if (!context.hasPermission(Item.CONFIGURE)) {
-                    return result.includeCurrentValue(credentialsId);
-                }
-            }
-            if (credentialsId == null) {
-                domainRequirements = Collections.<DomainRequirement>emptyList();
-            } else {
-                domainRequirements = URIRequirementBuilder.fromUri(credentialsId.trim()).build();
-            }
-            return result
-                    .includeEmptyValue()
-                    .includeMatchingAs(ACL.SYSTEM, context, StandardCredentials.class, domainRequirements, credentialsMatcher);
+            return AuthHelper.fillCredentialsDropdown(context, credentialsId);
         }
     }
 

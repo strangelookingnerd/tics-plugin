@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
@@ -18,8 +19,6 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.gson.Gson;
 
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
@@ -27,16 +26,16 @@ import hudson.plugins.tics.MeasureApiErrorResponse.AlertMessage;
 
 public abstract class AbstractApiCall {
     private final PrintStream logger;
-    private final Optional<StandardUsernamePasswordCredentials> credentials;
+    private final Optional<Pair<String, String>> credentials;
     private final String apiCallPrefix;
 
-    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<StandardUsernamePasswordCredentials> credentials) {
+    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials) {
         this.apiCallPrefix = apiCallName;
         this.logger = logger;
         this.credentials = credentials;
     }
 
-    protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+    protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, MeasureApiCallException {
         final int timeoutMs = 300 * 1000;
         final RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(timeoutMs)
@@ -46,8 +45,8 @@ public abstract class AbstractApiCall {
         HttpClientBuilder builder = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig);
         if (credentials.isPresent()) {
-            final String username = credentials.get().getUsername();
-            final String password = credentials.get().getPassword().getPlainText();
+            final String username = credentials.get().getLeft();
+            final String password = credentials.get().getRight();
             final CredentialsProvider credsProvider = new BasicCredentialsProvider();
             credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
             builder = builder.setDefaultCredentialsProvider(credsProvider);

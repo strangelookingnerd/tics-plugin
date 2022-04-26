@@ -6,8 +6,6 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -15,6 +13,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.kohsuke.stapler.AncestorInPath;
@@ -23,15 +22,6 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.verb.POST;
 
-
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
@@ -47,17 +37,14 @@ import hudson.Launcher.ProcStarter;
 import hudson.Proc;
 import hudson.Util;
 import hudson.model.Item;
-import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.tics.TicsPublisher.InvalidTicsViewerUrl;
-import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 
@@ -77,7 +64,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     public final Metrics calc;
     public final Metrics recalc;
     public final boolean installTics;
-//    public final String credentialsId;
+    public final String credentialsId;
 
     /**
      * This annotation tells Hudson to call this constructor, with values from the configuration form page with matching parameter names.
@@ -99,7 +86,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             , final Metrics calc
             , final Metrics recalc
             , final boolean installTics
-            //, final String credentialsId
+            , final String credentialsId
             ) {
         this.ticsPath = ticsPath;
         this.ticsConfiguration = ticsConfiguration;
@@ -113,7 +100,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         this.calc = calc == null ? new Metrics() : calc;
         this.recalc = recalc == null ? new Metrics() : recalc;
         this.installTics = installTics;
-        //this.credentialsId = credentialsId;
+        this.credentialsId = credentialsId;
     }
 
     @Override
@@ -137,8 +124,8 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                     throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
                 }
 
-//                final Optional<StandardUsernamePasswordCredentials> credentials = getStandardUsernameCredentials(run.getParent(), this.credentialsId);
-                final InstallTicsApiCall installTicsApiCall = new InstallTicsApiCall(ticsInstallApiBaseUrl, Optional.empty(), listener);
+                final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(run.getParent(), credentialsId, run.getEnvironment(listener));
+                final InstallTicsApiCall installTicsApiCall = new InstallTicsApiCall(ticsInstallApiBaseUrl, usernameAndPassword, listener);
                 final String installTicsApiData = installTicsApiCall.retrieveInstallTics();
                 installTicsApiFullUrl = tiobeWebBaseUrl + installTicsApiData;
             }
@@ -173,7 +160,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, launcher);
 
         final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
-        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher)).envs(getEnvMap(buildEnv));
+        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher)).envs(getEnvMap(buildEnv, run));
 
         final Proc proc = launcher.launch(starter);
         final int exitCode = proc.join();
@@ -278,7 +265,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
     }
 
-    Map<String, String> getEnvMap(final EnvVars buildEnv) {
+    Map<String, String> getEnvMap(final EnvVars buildEnv, final Run run) {
         final Map<String, String> out = Maps.newLinkedHashMap();
         final ImmutableList<String> lines = ImmutableList.copyOf(Splitter.onPattern("\r?\n").split(MoreObjects.firstNonNull(environmentVariables, "")));
         for (final String line : lines) {
@@ -295,22 +282,14 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         if (isNotEmpty(ticsPath)) {
             out.put("TICSINSTALLDIR", Util.replaceMacro(ticsPath, buildEnv));
         }
+
+        // Find TICSAUTHTOKEN and assign its value to an environment variable
+        final String token = AuthHelper.getTicsToken(run.getParent(), this.credentialsId, buildEnv);
+        if (!Strings.isNullOrEmpty(token)) {
+            out.put("TICSAUTHTOKEN", Util.replaceMacro(token, buildEnv));
+        }
+
         return out;
-    }
-
-    static Optional<StandardUsernamePasswordCredentials> getStandardUsernameCredentials(final Job<?, ?> job, final String credentialsId) {
-        if (Strings.isNullOrEmpty(credentialsId)) {
-            return Optional.empty();
-        }
-
-        final List<DomainRequirement> domainRequirements = Collections.<DomainRequirement>emptyList();
-        final List<StandardUsernamePasswordCredentials> list = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, job, ACL.SYSTEM, domainRequirements);
-        for (final StandardUsernamePasswordCredentials c : list) {
-            if (credentialsId.equals(c.getId())) {
-                return Optional.of(c);
-            }
-        }
-        return Optional.empty();
     }
 
     @Override
@@ -342,26 +321,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         /** Called by Jenkins to fill credentials dropdown list */
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath final Item context, @QueryParameter final String credentialsId) {
-            final List<DomainRequirement> domainRequirements;
-            final CredentialsMatcher credentialsMatcher = CredentialsMatchers.anyOf(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
-            final StandardListBoxModel result = new StandardListBoxModel();
-            if (context == null) {
-                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
-                    return result.includeCurrentValue(credentialsId);
-                }
-            } else {
-                if (!context.hasPermission(Item.CONFIGURE)) {
-                    return result.includeCurrentValue(credentialsId);
-                }
-            }
-            if (credentialsId == null) {
-                domainRequirements = Collections.<DomainRequirement>emptyList();
-            } else {
-                domainRequirements = URIRequirementBuilder.fromUri(credentialsId.trim()).build();
-            }
-            return result
-                    .includeEmptyValue()
-                    .includeMatchingAs(ACL.SYSTEM, context, StandardCredentials.class, domainRequirements, credentialsMatcher);
+            return AuthHelper.fillCredentialsDropdown(context, credentialsId);
         }
 
         @POST

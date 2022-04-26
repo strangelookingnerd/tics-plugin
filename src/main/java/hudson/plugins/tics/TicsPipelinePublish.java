@@ -37,6 +37,7 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     public String userId;
     public boolean checkQualityGate;
     public boolean failIfQualityGateFails;
+    public String credentialsId;
 
     @DataBoundConstructor
     public TicsPipelinePublish(
@@ -71,6 +72,11 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     }
 
     private String getCredentials() {
+
+        if (!Strings.isNullOrEmpty(this.credentialsId)) {
+            return credentialsId;
+        }
+
         if (Strings.isNullOrEmpty(this.userName) && Strings.isNullOrEmpty(this.userId)) {
             return "";
         }
@@ -132,6 +138,11 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     @DataBoundSetter
     public void setFailIfQualityGateFails(final boolean value) {
         this.failIfQualityGateFails = value;
+    }
+    
+    @DataBoundSetter
+    public void setCredentialsId(final String value) {
+        this.credentialsId = value;
     }
 
     @Symbol(PUBLISH_TICS_RESULTS) @Extension

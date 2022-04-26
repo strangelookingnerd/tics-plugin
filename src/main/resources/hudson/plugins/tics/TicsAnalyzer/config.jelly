@@ -17,8 +17,15 @@
     <f:checkbox/>
   </f:entry>
 
-  <f:entry title="TICS Configuration directory" field="ticsConfiguration">
+  <f:entry title="TICS Configuration Location" field="ticsConfiguration">
     <f:textbox/>
+  </f:entry>
+  
+  <f:entry title="Authentication"
+    field="credentialsId"
+    description="Required only if TICS authentication is configured."
+    >
+    <c:select/>
   </f:entry>
 
   <f:entry title="Build Server installation path" field="ticsPath">

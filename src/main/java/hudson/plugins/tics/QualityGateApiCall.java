@@ -7,13 +7,12 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.gson.Gson;
 
 import hudson.model.TaskListener;
@@ -27,7 +26,7 @@ public class QualityGateApiCall extends AbstractApiCall {
     private final String project;
     private final String branch;
 
-    public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, final Optional<StandardUsernamePasswordCredentials> credentials, final TaskListener listener) {
+    public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, Optional<Pair<String, String>> credentials, final TaskListener listener) {
         super(LOGGING_PREFIX, listener.getLogger(), credentials);
         final String projectAndBranch = ticsPath.split("://")[1];
         final String[] parts = projectAndBranch.split("/", 2);

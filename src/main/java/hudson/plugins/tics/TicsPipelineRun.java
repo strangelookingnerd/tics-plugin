@@ -72,7 +72,7 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     public String tmpdir;
     public LinkedHashMap<String, String> environmentVariables;
     public boolean installTics;
-//    public String credentialsId;
+    public String credentialsId;
     
 
     @DataBoundConstructor
@@ -102,8 +102,8 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
                 extraArguments,
                 createMetricsObject(calc),
                 createMetricsObject(recalc),
-                installTics
-//                credentialsId
+                installTics,
+                credentialsId
         );
         ta.perform(run, workspace, launcher, listener);
     }
@@ -200,6 +200,11 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setInstallTics(final boolean value) {
         this.installTics = value;
+    }
+    
+    @DataBoundSetter
+    public void setCredentialsId(final String value) {
+        this.credentialsId = value;
     }
 
     @Symbol("runTics") @Extension
