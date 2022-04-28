@@ -3,7 +3,7 @@
   <l:layout>
     <l:side-panel>
       <l:tasks>
-        <l:task icon="images/24x24/up.gif" href=".." title="${%Back to Build}" />
+        <l:task icon="icon-up icon-md" href=".." title="${%Back to Build}" />
       </l:tasks>
     </l:side-panel>
 
