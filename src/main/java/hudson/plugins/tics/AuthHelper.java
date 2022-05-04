@@ -59,13 +59,15 @@ public final class AuthHelper {
         return Optional.empty();
     }
 
-    public static final Optional<Pair<String, String>> lookupUsernameAndPasswordFromCredentialsId(final Job<?, ?> job, final String credentialsId, final EnvVars buildEnv) {
-        return lookupCredentials(StandardUsernamePasswordCredentials.class, job, credentialsId)
-                .map(credentials -> Pair.of(credentials.getUsername(), Secret.toString(credentials.getPassword())))
-                .or(() -> 
-                    AuthHelper.lookupTicsAuthToken(job, credentialsId, buildEnv)
-                            .map(AuthHelper::decodeTokenToUsernamePassword)
-                );
+    public static Optional<Pair<String, String>> lookupUsernameAndPasswordFromCredentialsId(final Job<?, ?> job, final String credentialsId, final EnvVars buildEnv) {
+        final Optional<Pair<String, String>> credentialsPair = lookupCredentials(StandardUsernamePasswordCredentials.class, job, credentialsId)
+                .map(credentials -> Pair.of(credentials.getUsername(), Secret.toString(credentials.getPassword())));
+        if (credentialsPair.isPresent()) {
+            return credentialsPair;
+        } else {
+            return AuthHelper.lookupTicsAuthToken(job, credentialsId, buildEnv)
+                    .map(AuthHelper::decodeTokenToUsernamePassword);
+        }
     }
 
     /**
