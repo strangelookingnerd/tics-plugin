@@ -5,7 +5,6 @@ import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -24,10 +23,8 @@ import org.kohsuke.stapler.verb.POST;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -124,7 +121,10 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                     throw new IllegalArgumentException(LOGGING_PREFIX + "Invalid TICS Viewer URL", ex);
                 }
 
-                final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(run.getParent(), credentialsId, run.getEnvironment(listener));
+                final EnvVars env2 = new EnvVars(buildEnv);
+                env2.putAll(AuthHelper.getPluginEnvMap(buildEnv, environmentVariables));
+                final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.lookupUsernameAndPasswordFromCredentialsId(run.getParent(), credentialsId, env2);
+
                 final InstallTicsApiCall installTicsApiCall = new InstallTicsApiCall(ticsInstallApiBaseUrl, usernameAndPassword, listener);
                 final String installTicsApiData = installTicsApiCall.retrieveInstallTics();
                 installTicsApiFullUrl = tiobeWebBaseUrl + installTicsApiData;
@@ -160,7 +160,8 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, launcher);
 
         final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
-        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher)).envs(getEnvMap(buildEnv, run));
+        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher))
+                .envs(getEnvMap(buildEnv, run));
 
         final Proc proc = launcher.launch(starter);
         final int exitCode = proc.join();
@@ -267,13 +268,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
     Map<String, String> getEnvMap(final EnvVars buildEnv, final Run run) {
         final Map<String, String> out = Maps.newLinkedHashMap();
-        final ImmutableList<String> lines = ImmutableList.copyOf(Splitter.onPattern("\r?\n").split(MoreObjects.firstNonNull(environmentVariables, "")));
-        for (final String line : lines) {
-            final ArrayList<String> splitted = Lists.newArrayList(Splitter.on("=").limit(2).split(line));
-            if (splitted.size() == 2) {
-                out.put(splitted.get(0).trim(), Util.replaceMacro(splitted.get(1).trim(), buildEnv));
-            }
-        }
+        out.putAll(AuthHelper.getPluginEnvMap(buildEnv, environmentVariables));
 
         if (isNotEmpty(ticsConfiguration)) {
             out.put("TICS", Util.replaceMacro(ticsConfiguration, buildEnv));
@@ -283,10 +278,10 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             out.put("TICSINSTALLDIR", Util.replaceMacro(ticsPath, buildEnv));
         }
 
-        // Find TICSAUTHTOKEN and assign its value to an environment variable
-        final String token = AuthHelper.getTicsToken(run.getParent(), this.credentialsId, buildEnv);
-        if (!Strings.isNullOrEmpty(token)) {
-            out.put("TICSAUTHTOKEN", Util.replaceMacro(token, buildEnv));
+        if (!out.containsKey(AuthHelper.TICSAUTHTOKEN)) { 
+            // Find TICSAUTHTOKEN and assign its value to an environment variable
+            final Optional<String> optToken = AuthHelper.lookupTicsAuthToken(run.getParent(), this.credentialsId, buildEnv);
+            optToken.ifPresent(token -> out.put(AuthHelper.TICSAUTHTOKEN, Util.replaceMacro(token, buildEnv)));
         }
 
         return out;

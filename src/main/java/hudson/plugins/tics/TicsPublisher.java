@@ -98,7 +98,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
-        final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(run.getParent(), credentialsId, run.getEnvironment(listener));
+        final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.lookupUsernameAndPasswordFromCredentialsId(run.getParent(), credentialsId, run.getEnvironment(listener));
         final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(this.ticsPath), "Path not specified"), run.getEnvironment(listener));
 
         final String measureApiUrl;
@@ -314,7 +314,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
                     final String measureApiUrl = ValidationHelper.getMeasureApiUrl(ValidationHelper.getTiobewebBaseUrlFromGivenUrl(Util.replaceMacro(resolvedViewerUrl, envvars)));
                     final PrintStream dummyLogger = new PrintStream(new ByteArrayOutputStream(), false, "UTF-8");
 
-                    final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.getUsernameAndPasswordFromCredentials(project, credentialsId, envvars);
+                    final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.lookupUsernameAndPasswordFromCredentialsId(project, credentialsId, envvars);
                     final MeasureApiCall apiCall = new MeasureApiCall(dummyLogger, measureApiUrl, usernameAndPassword);
                     apiCall.execute(MeasureApiCall.RESPONSE_DOUBLE_TYPETOKEN, Util.replaceMacro(value, envvars), "none");
                 }
