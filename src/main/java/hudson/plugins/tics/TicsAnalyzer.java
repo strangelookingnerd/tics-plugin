@@ -209,7 +209,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         if (isLinux) {
             return ". <(curl --silent --show-error \'" + url + "\' )";
         } else {
-            return "powershell \"Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))\"";
+            return "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))";
         }
     }
 
