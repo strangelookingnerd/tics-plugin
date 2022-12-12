@@ -9,7 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
@@ -20,13 +19,10 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-
 import com.google.gson.Gson;
 
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.MeasureApiErrorResponse.AlertMessage;
-import hudson.ProxyConfiguration;
-import jenkins.model.Jenkins;
 
 public abstract class AbstractApiCall {
     private final PrintStream logger;
@@ -54,16 +50,6 @@ public abstract class AbstractApiCall {
             final CredentialsProvider credsProvider = new BasicCredentialsProvider();
             credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
             builder = builder.setDefaultCredentialsProvider(credsProvider);
-        }
-
-        Jenkins jenkins = Jenkins.get();
-        if (jenkins != null) {
-            ProxyConfiguration proxy = jenkins.proxy;
-            if (proxy != null) {
-                logger.println("Using proxy: " + proxy.name + ":" + proxy.port);
-                HttpHost hostProxy = new HttpHost(proxy.name, proxy.port);
-                builder = builder.setProxy(hostProxy);
-            }
         }
         return builder.build();
     }
