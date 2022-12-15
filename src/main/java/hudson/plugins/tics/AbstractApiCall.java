@@ -22,9 +22,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
 import com.google.gson.Gson;
+import com.google.common.base.Strings;
 
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.MeasureApiErrorResponse.AlertMessage;
+import hudson.util.Secret;
 import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 
@@ -48,23 +50,39 @@ public abstract class AbstractApiCall {
                 .build();
         HttpClientBuilder builder = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig);
+        String credentialUsageMsg = "";
+        Jenkins jenkins = Jenkins.get();
+        final CredentialsProvider credsProvider = new BasicCredentialsProvider();
+
         if (credentials.isPresent()) {
             final String username = credentials.get().getLeft();
             final String password = credentials.get().getRight();
-            final CredentialsProvider credsProvider = new BasicCredentialsProvider();
             credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
-            builder = builder.setDefaultCredentialsProvider(credsProvider);
         }
 
-        Jenkins jenkins = Jenkins.get();
         if (jenkins != null) {
             ProxyConfiguration proxy = jenkins.proxy;
             if (proxy != null) {
-                logger.println("Using proxy: " + proxy.name + ":" + proxy.port);
+                credentialUsageMsg += "Using proxy: " + proxy.name + ":" + proxy.port;
                 HttpHost hostProxy = new HttpHost(proxy.name, proxy.port);
                 builder = builder.setProxy(hostProxy);
+
+                final String proxyUser = proxy.getUserName();
+                final String proxyPass = Secret.toString(proxy.getSecretPassword());
+
+                // Only set credentials if provided.
+                if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
+                    credentialUsageMsg += " with credentials for " + proxyUser;
+                    credsProvider.setCredentials(
+                        new AuthScope(proxy.name, proxy.port),
+                        new UsernamePasswordCredentials(proxyUser, proxyPass)
+                    );
+                }
             }
         }
+
+        logger.println(credentialUsageMsg);
+        builder = builder.setDefaultCredentialsProvider(credsProvider);
         return builder.build();
     }
 
@@ -81,6 +99,10 @@ public abstract class AbstractApiCall {
             } else {
                 throw new MeasureApiCallException(apiCallPrefix + " 401 Unauthorized - Project requires authentication, but no credentials provided");
             }
+        }
+
+        if  (statusCode == HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED) {
+            throw new MeasureApiCallException(apiCallPrefix + " " + HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED + " Proxy Authentication Required");
         }
 
         final Optional<String> formattedError = tryExtractExceptionMessageFromBody(body);
