@@ -37,8 +37,8 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 
 public final class AuthHelper {
-    private AuthHelper() {};
-    
+    private AuthHelper() {}
+
     public static final String TICSAUTHTOKEN = "TICSAUTHTOKEN";
 
     /**
@@ -71,13 +71,13 @@ public final class AuthHelper {
     }
 
     /**
-     * Looks for the TICSAUTHTOKEN in the Credentials plugin for given credentialsId, or the or the provided {@link EnvVars} 
+     * Looks for the TICSAUTHTOKEN in the Credentials plugin for given credentialsId, or the or the provided {@link EnvVars}
      * and returns its value.
-     * <b>Warning</b> If the provided variables contains  
+     * <b>Warning</b> If the provided variables contains
      **/
     public static Optional<String> lookupTicsAuthToken(final Job<?, ?> job, final String credentialsId, final EnvVars buildEnv) {
         final String errorMessage = "The provided credentials are of the wrong type. Only two types are supported; username & password and secret text.";
-        // TICSAUTHTOKEN can be set through the credentials dropdown available within our plugin 
+        // TICSAUTHTOKEN can be set through the credentials dropdown available within our plugin
         // In this case, the credentialsId is present
         if (!Strings.isNullOrEmpty(credentialsId)) {
             return AuthHelper.lookupCredentials(StringCredentials.class, job, credentialsId)
@@ -88,7 +88,7 @@ public final class AuthHelper {
             // In both cases, an environment variable is created.
             // If TICSAUTHTOKEN is set as a credentials parameter then the saved format of the environment variable is TICSAUTHTOKEN=credentialsId
             // For all the other cases, the environment variable is of the format TICSAUTHTOKEN=value
-            String ticsTokenEnv = buildEnv.get(TICSAUTHTOKEN);
+            final String ticsTokenEnv = buildEnv.get(TICSAUTHTOKEN);
             if (!Strings.isNullOrEmpty(ticsTokenEnv)) {
                 return AuthHelper.lookupCredentials(StringCredentials.class, job, ticsTokenEnv)
                         .map(c -> Optional.of(c.getSecret().getPlainText()))
@@ -109,7 +109,7 @@ public final class AuthHelper {
             }
             final Pair<String, String> splittedPair = Pair.of(splitted[0], splitted[1]);
             return splittedPair;
-        } catch (Exception ex) { 
+        } catch (final Exception ex) {
           throw new IllegalArgumentException("Malformed authentication token. Please make sure you are using a valid token from the TICS Viewer.", ex);
         }
     }

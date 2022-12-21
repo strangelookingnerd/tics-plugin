@@ -18,6 +18,8 @@ import org.kohsuke.stapler.verb.POST;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -97,7 +99,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
+    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @NonNull final EnvVars envvars, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, RuntimeException, InterruptedException {
         final Optional<Pair<String, String>> usernameAndPassword = AuthHelper.lookupUsernameAndPasswordFromCredentialsId(run.getParent(), credentialsId, run.getEnvironment(listener));
         final String ticsPath1 = Util.replaceMacro(Preconditions.checkNotNull(Strings.emptyToNull(this.ticsPath), "Path not specified"), run.getEnvironment(listener));
 
@@ -128,7 +130,7 @@ public class TicsPublisher extends Recorder implements SimpleBuildStep {
             gateData = null;
         }
 
-        run.addAction(new TicsPublisherBuildAction(run, tqiData, gateData, tiobeWebBaseUrl));
+        run.addAction(new TicsPublisherBuildAction(run, ticsPath1, tqiData, gateData, tiobeWebBaseUrl));
         run.setResult(Result.SUCCESS); // note that: "has no effect when the result is already set and worse than the proposed result"
     }
 

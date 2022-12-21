@@ -1,14 +1,20 @@
 package hudson.plugins.tics;
 
+import java.util.List;
+import java.util.Objects;
+
 import hudson.model.Run;
 
 public class TicsPublisherProjectAction extends AbstractTicsPublisherAction {
     public final Run<?, ?> run;
+    public final String ticsPath;
 
-    public TicsPublisherProjectAction(final Run<?, ?> run) {
+    public TicsPublisherProjectAction(final Run<?, ?> run, final String ticsPath) {
         this.run = run;
+        this.ticsPath = ticsPath;
     }
 
+    @Override
     public String getIconFileName() {
         // We return null to indicate that their should not be a link in the sidebar on the left.
         // The TICS results are already in the floating box.
@@ -22,9 +28,16 @@ public class TicsPublisherProjectAction extends AbstractTicsPublisherAction {
      */
     public TicsPublisherBuildAction getLastBuild() {
         for (Run<?, ?> b = run.getParent().getLastBuild(); b != null; b = b.getPreviousBuild()) {
-            final TicsPublisherBuildAction r = b.getAction(TicsPublisherBuildAction.class);
-            if (r != null) {
-                return r;
+            final List<TicsPublisherBuildAction> actions = b.getActions(TicsPublisherBuildAction.class);
+            for (final TicsPublisherBuildAction action : actions) {
+                if (action == null) {
+                    continue;
+                }
+                if (Objects.equals(ticsPath, action.ticsPath) // #30349: differentiate between multiple publish steps within a single pipeline invocation
+                        || this.ticsPath == null // happens for builds at the time that TicsPublisherProjectAction did not yet store ticsPath
+                        ) {
+                    return action;
+                }
             }
         }
         return null;

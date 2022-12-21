@@ -26,6 +26,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -33,6 +34,7 @@ import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Proc;
 import hudson.Util;
+import hudson.model.AbstractProject;
 import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -101,7 +103,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, InterruptedException {
+    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final EnvVars envvars, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws IOException, InterruptedException {
         final String errorPrefix = "TICS Analysis failed with exit code: ";
         final PrintStream logger = listener.getLogger();
         try {
@@ -154,7 +156,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return path + command;
     }
 
-    int launchTicsQServer(final String url, final Run run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
+    int launchTicsQServer(final String url, final Run<?, ?> run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
 
         final String bootstrapCommand =  installTics ? getBootstrapCmd(url, launcher) : "";
         final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, launcher);
@@ -205,7 +207,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     private String getBootstrapCmd(final String url, final Launcher launcher) {
-        final boolean isLinux = launcher.isUnix(); 
+        final boolean isLinux = launcher.isUnix();
         if (isLinux) {
             return ". <(curl --silent --show-error \'" + url + "\' )";
         } else {
@@ -228,13 +230,13 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         final String scriptSuffix =  isLinux ? ".sh" : ".ps1";
         final String scriptContentStart = isLinux ? "#!/bin/bash" : "";
-        final String ticsAnalysisCmdEscaped = isLinux 
-                ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" ")) 
+        final String ticsAnalysisCmdEscaped = isLinux
+                ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "))
                 : ticsAnalysisCmd.toWindowsCommand().toString();
 
-        FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
+        final FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
 
-        String contents = scriptContentStart + "\n"
+        final String contents = scriptContentStart + "\n"
                 + bootstrapCmd + "\n"
                 + ticsAnalysisCmdEscaped;
 
@@ -266,7 +268,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
     }
 
-    Map<String, String> getEnvMap(final EnvVars buildEnv, final Run run) {
+    Map<String, String> getEnvMap(final EnvVars buildEnv, final Run<?, ?> run) {
         final Map<String, String> out = Maps.newLinkedHashMap();
         out.putAll(AuthHelper.getPluginEnvMap(buildEnv, environmentVariables));
 
@@ -278,7 +280,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             out.put("TICSINSTALLDIR", Util.replaceMacro(ticsPath, buildEnv));
         }
 
-        if (!out.containsKey(AuthHelper.TICSAUTHTOKEN)) { 
+        if (!out.containsKey(AuthHelper.TICSAUTHTOKEN)) {
             // Find TICSAUTHTOKEN and assign its value to an environment variable
             final Optional<String> optToken = AuthHelper.lookupTicsAuthToken(run.getParent(), this.credentialsId, buildEnv);
             optToken.ifPresent(token -> out.put(AuthHelper.TICSAUTHTOKEN, Util.replaceMacro(token, buildEnv)));
@@ -304,7 +306,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @Override
-        public boolean isApplicable(final Class type) {
+        public boolean isApplicable(final Class<? extends AbstractProject> type) {
             return true;
         }
 
@@ -359,7 +361,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @POST
-        public FormValidation doCheckTicsConfiguration(@AncestorInPath final Item item,  @AncestorInPath final TaskListener listener, @QueryParameter final String value, 
+        public FormValidation doCheckTicsConfiguration(@AncestorInPath final Item item,  @AncestorInPath final TaskListener listener, @QueryParameter final String value,
                 @QueryParameter("installTics") final boolean installTics) {
             if (item == null) { // no context
                 return FormValidation.ok();
@@ -392,7 +394,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 if (validation.isPresent()) {
                     return validation.get();
                 }
-                
+
                 validation = ValidationHelper.checkViewerUrlForWarningsCommon(value);
                 if (validation.isPresent()) {
                     return validation.get();

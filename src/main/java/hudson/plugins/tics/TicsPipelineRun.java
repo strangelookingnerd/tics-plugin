@@ -17,6 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -73,7 +74,7 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     public LinkedHashMap<String, String> environmentVariables;
     public boolean installTics;
     public String credentialsId;
-    
+
 
     @DataBoundConstructor
     public TicsPipelineRun(
@@ -84,8 +85,9 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull final Run run,
+    public void perform(@Nonnull final Run<?, ?> run,
                         @Nonnull final FilePath workspace,
+                        @Nonnull final EnvVars envvars,
                         @Nonnull final Launcher launcher,
                         @Nonnull final TaskListener listener) throws IOException, InterruptedException {
 
@@ -105,7 +107,7 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
                 installTics,
                 credentialsId
         );
-        ta.perform(run, workspace, launcher, listener);
+        ta.perform(run, workspace, envvars, launcher, listener);
     }
 
     private String convertEnvironmentVariablesToString() {
@@ -196,12 +198,12 @@ public class TicsPipelineRun extends Builder implements SimpleBuildStep {
     public void setEnvironmentVariables(final LinkedHashMap<String, String> value) {
         this.environmentVariables = value;
     }
-    
+
     @DataBoundSetter
     public void setInstallTics(final boolean value) {
         this.installTics = value;
     }
-    
+
     @DataBoundSetter
     public void setCredentialsId(final String value) {
         this.credentialsId = value;

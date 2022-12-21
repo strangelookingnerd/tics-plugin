@@ -136,7 +136,7 @@ public class TqiPublisherResultBuilder {
         }
         final MetricValue<List<Run>> mv = resp.data.get(0);
         return Lists.reverse(Optional.ofNullable(mv.value).orElseGet(ArrayList::new));
-    };
+    }
 
     private final Supplier<Optional<Baseline>> baseline = Suppliers.memoize(new Supplier<Optional<Baseline>>() {
         @Override
