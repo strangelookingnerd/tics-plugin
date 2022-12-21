@@ -14,6 +14,8 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.common.base.Strings;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -47,7 +49,7 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws InterruptedException, IOException {
+    public void perform(@Nonnull final Run<?, ?> run, @Nonnull final FilePath workspace, @NonNull final EnvVars envvars, @Nonnull final Launcher launcher, @Nonnull final TaskListener listener) throws InterruptedException, IOException {
         if (Strings.isNullOrEmpty(viewerUrl)) {
             throw new IllegalArgumentException("The pipeline method '" + PUBLISH_TICS_RESULTS + "' was used without specifying the 'viewerUrl'. " +
                     "For instance a 'viewerUrl' looks like: 'http://www.company.com:42506/tiobeweb/TICS'.\n");
@@ -58,9 +60,9 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
             }
         }
 
-        final String credentialsId = getCredentials();
-        final TicsPublisher tp = new TicsPublisher(viewerUrl, getTicsProjectPath(), credentialsId, this.checkQualityGate, this.failIfQualityGateFails);
-        tp.perform(run, workspace, launcher, listener);
+        final String creds = getCredentials();
+        final TicsPublisher tp = new TicsPublisher(viewerUrl, getTicsProjectPath(), creds, this.checkQualityGate, this.failIfQualityGateFails);
+        tp.perform(run, workspace, envvars, launcher, listener);
     }
 
     private String getTicsProjectPath() {
@@ -139,7 +141,7 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
     public void setFailIfQualityGateFails(final boolean value) {
         this.failIfQualityGateFails = value;
     }
-    
+
     @DataBoundSetter
     public void setCredentialsId(final String value) {
         this.credentialsId = value;

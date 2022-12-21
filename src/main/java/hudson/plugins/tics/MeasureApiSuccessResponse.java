@@ -40,6 +40,7 @@ public class MeasureApiSuccessResponse<T> {
 
         public TqiVersion() { /* for gson */ }
 
+        @Override
         public int compareTo(final TqiVersion that) {
             return ComparisonChain.start()
                 .compare(this.major, that.major)
@@ -56,16 +57,20 @@ public class MeasureApiSuccessResponse<T> {
             return result;
         }
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
+        public boolean equals(final Object obj) {
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
-            TqiVersion other = (TqiVersion) obj;
-            if (this.major != other.major)
+            }
+            final TqiVersion other = (TqiVersion) obj;
+            if (this.major != other.major) {
                 return false;
+            }
             return this.minor == other.minor;
         }
     }

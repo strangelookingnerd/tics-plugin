@@ -36,21 +36,24 @@ public class TicsPublisherBuildAction extends AbstractTicsPublisherAction implem
     private final Run<?, ?> run;
     public final MetricData tqiData;
     public final QualityGateData gateData;
+    public final String ticsPath;
     private final String tiobeWebBaseUrl;
 
     private final List<TicsPublisherProjectAction> projectActions;
 
     public TicsPublisherBuildAction(
             final Run<?, ?> run,
+            final String ticsPath,
             final MetricData tqiData,
             final QualityGateData QualityGateData,
             final String tiobeWebBaseUrl
     ) {
         this.run = run;
+        this.ticsPath = ticsPath;
         this.tqiData = tqiData;
         this.gateData = QualityGateData;
         final List<TicsPublisherProjectAction> actions = new ArrayList<>();
-        actions.add(new TicsPublisherProjectAction(run));
+        actions.add(new TicsPublisherProjectAction(run, ticsPath));
         this.projectActions = actions;
         this.tiobeWebBaseUrl = tiobeWebBaseUrl;
     }
