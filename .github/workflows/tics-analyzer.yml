@@ -1,0 +1,26 @@
+name: TICS Analyzer
+
+on:
+  # schedule:
+  #   - cron: "00 00 * * *"
+  workflow_dispatch
+
+jobs:
+  TICSQServer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup JDK 8
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 8
+          cache: maven
+      - name: Build with Maven
+        run: ./mvnw --batch-mode --update-snapshots package
+      - name: Install and run TICSQSERVER
+        env:
+          TICSAUTHTOKEN: ${{ secrets.EBOIT_ANALYZER_TOKEN }}
+        run: |
+          . <(curl --silent --show-error "https://eboit.tiobe.com/tiobeweb/TICS/api/public/v1/fapi/installtics/Script?cfg=main&platform=linux&url=https://eboit.tiobe.com/tiobeweb/TICS/")
+          TICSQServer -project 'Jenkins' -branchdir .
