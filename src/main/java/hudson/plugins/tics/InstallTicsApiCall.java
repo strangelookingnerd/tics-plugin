@@ -1,6 +1,7 @@
 package hudson.plugins.tics;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -11,8 +12,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+
 import hudson.model.TaskListener;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 
@@ -21,8 +24,8 @@ public class InstallTicsApiCall extends AbstractApiCall {
     private static final String LOGGING_PREFIX = "[TICS Install]";
     private final String installTicsUrl;
 
-    public InstallTicsApiCall(final String installTicsUrl, Optional<Pair<String, String>> credentials, final TaskListener listener) {
-        super(LOGGING_PREFIX, listener.getLogger(), credentials);
+    public InstallTicsApiCall(final String installTicsUrl, final Optional<Pair<String, String>> credentials, final TaskListener listener) {
+        super(LOGGING_PREFIX, listener.getLogger(), credentials, installTicsUrl);
         this.installTicsUrl = installTicsUrl;
     }
 
@@ -47,7 +50,7 @@ public class InstallTicsApiCall extends AbstractApiCall {
 
             this.throwIfStatusNotOk(response, body);
             return body;
-        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException ex) {
+        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException | URISyntaxException ex) {
             throw new RuntimeException("Error while performing API request to " + url, ex);
         }
     }

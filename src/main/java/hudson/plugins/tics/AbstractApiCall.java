@@ -1,9 +1,14 @@
 package hudson.plugins.tics;
 
 import java.io.PrintStream;
+import java.net.Proxy;
+import java.net.ProxySelector;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,27 +26,27 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
-import com.google.gson.Gson;
 import com.google.common.base.Strings;
+import com.google.gson.Gson;
 
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.MeasureApiErrorResponse.AlertMessage;
-import hudson.util.Secret;
-import hudson.ProxyConfiguration;
-import jenkins.model.Jenkins;
 
 public abstract class AbstractApiCall {
     private final PrintStream logger;
     private final Optional<Pair<String, String>> credentials;
     private final String apiCallPrefix;
+    private final String url;
 
-    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials) {
+
+    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials, final String url) {
         this.apiCallPrefix = apiCallName;
         this.logger = logger;
         this.credentials = credentials;
+        this.url = url;
     }
 
-    protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, MeasureApiCallException {
+    protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, MeasureApiCallException, URISyntaxException {
         final int timeoutMs = 300 * 1000;
         final RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(timeoutMs)
@@ -50,8 +55,7 @@ public abstract class AbstractApiCall {
                 .build();
         HttpClientBuilder builder = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig);
-        String credentialUsageMsg = "";
-        Jenkins jenkins = Jenkins.get();
+
         final CredentialsProvider credsProvider = new BasicCredentialsProvider();
 
         if (credentials.isPresent()) {
@@ -60,31 +64,38 @@ public abstract class AbstractApiCall {
             credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
         }
 
-        if (jenkins != null) {
-            ProxyConfiguration proxy = jenkins.proxy;
-            if (proxy != null) {
-                credentialUsageMsg += "Using proxy: " + proxy.name + ":" + proxy.port;
-                HttpHost hostProxy = new HttpHost(proxy.name, proxy.port);
-                builder = builder.setProxy(hostProxy);
 
-                final String proxyUser = proxy.getUserName();
-                final String proxyPass = Secret.toString(proxy.getSecretPassword());
-
-                // Only set credentials if provided.
-                if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
-                    credentialUsageMsg += " with credentials for " + proxyUser;
-                    credsProvider.setCredentials(
-                        new AuthScope(proxy.name, proxy.port),
-                        new UsernamePasswordCredentials(proxyUser, proxyPass)
-                    );
-                }
-            }
+        Proxy selectedProxy = Proxy.NO_PROXY;
+        final List<Proxy> proxies = ProxySelector.getDefault().select(new URI(url));
+        for (final Proxy proxy : proxies) {
+            selectedProxy = proxy;
         }
 
-        logger.println(credentialUsageMsg);
+        if (selectedProxy.type() == Proxy.Type.HTTP) {
+            logger.println("Using proxy:" + selectedProxy.toString());
+            final JenkinsProxySelector ps = (JenkinsProxySelector) ProxySelector.getDefault();
+            final String proxyUser = ps.getProxyUser();
+            final String proxyPass = ps.getProxyPassword();
+
+            final HttpHost hostProxy = new HttpHost(ps.getProxyName(), ps.getProxyPort());
+            builder = builder.setProxy(hostProxy);
+
+//          Only set credentials if provided.
+            if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
+                logger.println("with credentials for:" + proxyUser);
+                credsProvider.setCredentials(
+                  new AuthScope(ps.getProxyName(), ps.getProxyPort()),
+                  new UsernamePasswordCredentials(proxyUser, proxyPass)
+              );
+            }
+
+        }
         builder = builder.setDefaultCredentialsProvider(credsProvider);
+        builder = builder.useSystemProperties();
         return builder.build();
     }
+
+
 
     protected void throwIfStatusNotOk(final HttpResponse response, final String body) throws MeasureApiCallException {
         final int statusCode = response.getStatusLine().getStatusCode();

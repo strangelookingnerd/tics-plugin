@@ -1,6 +1,7 @@
 package hudson.plugins.tics;
 
 import java.io.IOException;
+import java.net.ProxySelector;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -61,8 +62,15 @@ public class TicsPipelinePublish extends Recorder implements SimpleBuildStep {
         }
 
         final String creds = getCredentials();
-        final TicsPublisher tp = new TicsPublisher(viewerUrl, getTicsProjectPath(), creds, this.checkQualityGate, this.failIfQualityGateFails);
-        tp.perform(run, workspace, envvars, launcher, listener);
+        final ProxyUtil proxyUtil = new ProxyUtil(listener.getLogger());
+        final ProxySelector defProxySelector = ProxySelector.getDefault();
+        try {
+            proxyUtil.setDefaultProxyFromJenkinsConfiguration();
+            final TicsPublisher tp = new TicsPublisher(viewerUrl, getTicsProjectPath(), creds, this.checkQualityGate, this.failIfQualityGateFails);
+            tp.perform(run, workspace, envvars, launcher, listener);
+        } finally {
+            proxyUtil.restoreDefaultProxySelector(defProxySelector);
+        }
     }
 
     private String getTicsProjectPath() {
