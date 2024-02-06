@@ -1,7 +1,6 @@
 package hudson.plugins.tics;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -50,7 +49,7 @@ public class InstallTicsApiCall extends AbstractApiCall {
 
             this.throwIfStatusNotOk(response, body);
             return body;
-        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException | URISyntaxException ex) {
+        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException ex) {
             throw new RuntimeException("Error while performing API request to " + url, ex);
         }
     }
