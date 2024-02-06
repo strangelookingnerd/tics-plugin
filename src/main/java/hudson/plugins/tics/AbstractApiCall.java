@@ -70,29 +70,22 @@ public abstract class AbstractApiCall {
             if (proxy != null) {
                 final String proxyName = proxy.getName();
                 final int proxyPort = proxy.getPort();
-                final String noProxyHosts = proxy.getNoProxyHost().replace("\n", "|");
                 final List<Pattern> noProxyPatterns = proxy.getNoProxyHostPatterns();
                 final String proxyUser = proxy.getUserName();
                 final String proxyPass = Secret.toString(proxy.getSecretPassword());
-
-                logger.println("Found http(s) proxy setting: " + proxyName + ":" + proxyPort);
-                if (!Strings.isNullOrEmpty(noProxyHosts)) {
-                    logger.println("Found no proxy hosts setting: " + noProxyHosts);
-                }
 
                 if (!isProxyExempted(url, noProxyPatterns)) {
                     proxyUsageMsg += "Using proxy: " + proxyName + ":" + proxyPort;
                     final HttpHost hostProxy = new HttpHost(proxyName, proxyPort);
                     builder = builder.setProxy(hostProxy);
-                }
-
-//              Only set credentials if provided.
-                if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
-                    proxyUsageMsg += " with credentials for " + proxyUser;
-                    credsProvider.setCredentials(
-                      new AuthScope(proxyName, proxyPort),
-                      new UsernamePasswordCredentials(proxyUser, proxyPass)
-                    );
+                    // Only set credentials if provided.
+                    if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
+                        proxyUsageMsg += " with credentials for " + proxyUser;
+                        credsProvider.setCredentials(
+                            new AuthScope(proxyName, proxyPort),
+                            new UsernamePasswordCredentials(proxyUser, proxyPass)
+                        );
+                    }
                 }
             }
         }
@@ -103,10 +96,10 @@ public abstract class AbstractApiCall {
     }
 
 
-    protected boolean isProxyExempted(final String host, final List<Pattern> noProxyPatterns) {
+    protected boolean isProxyExempted(final String urlStr, final List<Pattern> noProxyPatterns) {
         Matcher matcher;
         for (final Pattern p : noProxyPatterns) {
-            matcher = p.matcher(host);
+            matcher = p.matcher(urlStr);
             if(matcher.find()) {
                 return true;
             }
