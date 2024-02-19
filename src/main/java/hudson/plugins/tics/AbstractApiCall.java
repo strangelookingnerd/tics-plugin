@@ -71,6 +71,9 @@ public abstract class AbstractApiCall {
                 final String proxyName = proxy.getName();
                 final int proxyPort = proxy.getPort();
                 final List<Pattern> noProxyPatterns = proxy.getNoProxyHostPatterns();
+                // Bypassing proxy for internal hosts by default
+                noProxyPatterns.add(Pattern.compile("localhost"));
+                noProxyPatterns.add(Pattern.compile("127\\..*"));
                 final String proxyUser = proxy.getUserName();
                 final String proxyPass = Secret.toString(proxy.getSecretPassword());
 
