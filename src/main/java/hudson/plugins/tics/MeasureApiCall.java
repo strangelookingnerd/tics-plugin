@@ -13,6 +13,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
@@ -48,8 +49,8 @@ public class MeasureApiCall extends AbstractApiCall {
         }
     }
 
-    public MeasureApiCall(final PrintStream logger, final String measureApiUrl, Optional<Pair<String, String>> credentials) {
-        super("[Measure API]", logger, credentials);
+    public MeasureApiCall(final PrintStream logger, final String measureApiUrl, final Optional<Pair<String, String>> credentials) {
+        super("[Measure API]", logger, credentials, measureApiUrl);
         Preconditions.checkState(measureApiUrl.endsWith("/Measure"));
         this.logger = logger;
         this.measureApiUrl = measureApiUrl;
@@ -82,6 +83,7 @@ public class MeasureApiCall extends AbstractApiCall {
                 CloseableHttpResponse response = httpclient.execute(httpGet);
                 ) {
                 body = EntityUtils.toString(response.getEntity());
+
                 this.throwIfStatusNotOk(response, body);
         } catch (final ConnectException e) {
             throw new MeasureApiCallException(e.getMessage());
@@ -96,15 +98,15 @@ public class MeasureApiCall extends AbstractApiCall {
             throw new RuntimeException("Error parsing json: " + body, ex);
         }
     }
-    
+
     private String convertToPathSyntax(final String ticsPath) {
-        List<String> ticsPathParts = Lists.newArrayList(Splitter.on("://").split(ticsPath));
+        final List<String> ticsPathParts = Lists.newArrayList(Splitter.on("://").split(ticsPath));
 
         if (ticsPathParts.size() < 2 ) {
             return ticsPath;
         }
 
-        List<String> projectAndBranch = Lists.newArrayList(Splitter.on("/").limit(2).split(ticsPathParts.get(1)))
+        final List<String> projectAndBranch = Lists.newArrayList(Splitter.on("/").limit(2).split(ticsPathParts.get(1)))
                 .stream()
                 .map(el -> el.replace("([(),])", "\\$1"))
                 .collect(Collectors.toList());

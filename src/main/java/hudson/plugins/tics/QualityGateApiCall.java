@@ -13,6 +13,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+
 import com.google.gson.Gson;
 
 import hudson.model.TaskListener;
@@ -26,8 +27,8 @@ public class QualityGateApiCall extends AbstractApiCall {
     private final String project;
     private final String branch;
 
-    public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, Optional<Pair<String, String>> credentials, final TaskListener listener) {
-        super(LOGGING_PREFIX, listener.getLogger(), credentials);
+    public QualityGateApiCall(final String qualityGateUrl, final String ticsPath, final Optional<Pair<String, String>> credentials, final TaskListener listener) {
+        super(LOGGING_PREFIX, listener.getLogger(), credentials, qualityGateUrl);
         final String projectAndBranch = ticsPath.split("://")[1];
         final String[] parts = projectAndBranch.split("/", 2);
         this.project = parts[0];
@@ -64,6 +65,5 @@ public class QualityGateApiCall extends AbstractApiCall {
             throw new RuntimeException("Error while performing API request to " + url, ex);
         }
     }
-
 
 }

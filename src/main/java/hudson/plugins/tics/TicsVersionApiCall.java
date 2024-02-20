@@ -23,10 +23,10 @@ public class TicsVersionApiCall extends AbstractApiCall {
     private final String ticsVersionUrl;
 
     public TicsVersionApiCall(final String ticsVersionUrl, final Optional<Pair<String, String>> credentials, final PrintStream logger) {
-        super(LOGGING_PREFIX, logger, credentials);
+        super(LOGGING_PREFIX, logger, credentials, ticsVersionUrl);
         this.ticsVersionUrl = ticsVersionUrl;
     }
-    
+
     public String retrieveTicsVersion() {
         final String url = this.ticsVersionUrl;
         final String response = this.performHttpRequest(url);
@@ -48,6 +48,5 @@ public class TicsVersionApiCall extends AbstractApiCall {
             throw new RuntimeException("Error while performing API request to " + url, ex);
         }
     }
-
 }
 

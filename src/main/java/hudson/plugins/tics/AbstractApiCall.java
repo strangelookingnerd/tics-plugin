@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,24 +22,27 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
-import com.google.gson.Gson;
 import com.google.common.base.Strings;
+import com.google.gson.Gson;
 
+import hudson.ProxyConfiguration;
 import hudson.plugins.tics.MeasureApiCall.MeasureApiCallException;
 import hudson.plugins.tics.MeasureApiErrorResponse.AlertMessage;
 import hudson.util.Secret;
-import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 
 public abstract class AbstractApiCall {
     private final PrintStream logger;
     private final Optional<Pair<String, String>> credentials;
     private final String apiCallPrefix;
+    private final String url;
 
-    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials) {
+
+    public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials, final String url) {
         this.apiCallPrefix = apiCallName;
         this.logger = logger;
         this.credentials = credentials;
+        this.url = url;
     }
 
     protected final CloseableHttpClient createHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, MeasureApiCallException {
@@ -50,8 +54,6 @@ public abstract class AbstractApiCall {
                 .build();
         HttpClientBuilder builder = HttpClients.custom()
                 .setDefaultRequestConfig(requestConfig);
-        String credentialUsageMsg = "";
-        Jenkins jenkins = Jenkins.get();
         final CredentialsProvider credsProvider = new BasicCredentialsProvider();
 
         if (credentials.isPresent()) {
@@ -60,30 +62,52 @@ public abstract class AbstractApiCall {
             credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
         }
 
-        if (jenkins != null) {
-            ProxyConfiguration proxy = jenkins.proxy;
-            if (proxy != null) {
-                credentialUsageMsg += "Using proxy: " + proxy.name + ":" + proxy.port;
-                HttpHost hostProxy = new HttpHost(proxy.name, proxy.port);
-                builder = builder.setProxy(hostProxy);
+        String proxyUsageMsg = "";
+        final Jenkins jenkins = Jenkins.get();
 
+        if (jenkins != null) {
+            final ProxyConfiguration proxy = jenkins.proxy;
+            if (proxy != null) {
+                final String proxyName = proxy.getName();
+                final int proxyPort = proxy.getPort();
+                final List<Pattern> noProxyPatterns = proxy.getNoProxyHostPatterns();
+                // Bypassing proxy for internal hosts by default
+                noProxyPatterns.add(Pattern.compile("localhost"));
+                noProxyPatterns.add(Pattern.compile("127\\..*"));
                 final String proxyUser = proxy.getUserName();
                 final String proxyPass = Secret.toString(proxy.getSecretPassword());
 
-                // Only set credentials if provided.
-                if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
-                    credentialUsageMsg += " with credentials for " + proxyUser;
-                    credsProvider.setCredentials(
-                        new AuthScope(proxy.name, proxy.port),
-                        new UsernamePasswordCredentials(proxyUser, proxyPass)
-                    );
+                if (!isProxyExempted(url, noProxyPatterns)) {
+                    proxyUsageMsg += "Using proxy: " + proxyName + ":" + proxyPort;
+                    final HttpHost hostProxy = new HttpHost(proxyName, proxyPort);
+                    builder = builder.setProxy(hostProxy);
+                    // Only set credentials if provided.
+                    if (!Strings.isNullOrEmpty(proxyUser) && !Strings.isNullOrEmpty(proxyPass)) {
+                        proxyUsageMsg += " with credentials for " + proxyUser;
+                        credsProvider.setCredentials(
+                            new AuthScope(proxyName, proxyPort),
+                            new UsernamePasswordCredentials(proxyUser, proxyPass)
+                        );
+                    }
                 }
             }
         }
 
-        logger.println(credentialUsageMsg);
+        logger.println(proxyUsageMsg);
         builder = builder.setDefaultCredentialsProvider(credsProvider);
         return builder.build();
+    }
+
+
+    protected boolean isProxyExempted(final String urlStr, final List<Pattern> noProxyPatterns) {
+        Matcher matcher;
+        for (final Pattern p : noProxyPatterns) {
+            matcher = p.matcher(urlStr);
+            if(matcher.find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void throwIfStatusNotOk(final HttpResponse response, final String body) throws MeasureApiCallException {
