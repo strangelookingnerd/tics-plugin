@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import org.joda.time.Instant;
 
 /**
- * Holds data produced by {@link @QualityGateApiCall}.
+ * Holds data produced by {@link QualityGateApiCall}.
  */
 public class QualityGateData {
     public final @Nullable String project;

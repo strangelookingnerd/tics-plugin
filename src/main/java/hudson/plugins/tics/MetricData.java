@@ -9,7 +9,7 @@ import org.joda.time.Instant;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Holds metric data produced by {@link TicsPublisherResultBuilder}.
+ * Holds metric data produced by {@link TqiPublisherResultBuilder}.
  */
 public class MetricData {
 
