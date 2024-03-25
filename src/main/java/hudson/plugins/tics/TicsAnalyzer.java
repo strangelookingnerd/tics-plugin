@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -234,15 +235,30 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "))
                 : ticsAnalysisCmd.toWindowsCommand().toString();
 
+        // trim double quotes for metric arguments after the -calc flag,e.g. -calc "CODINGSTANDARD",
+        // that were added for Windows commands
+        final String ticsAnalysisCmdCleaned = cleanTicsAnalysisCmd(ticsAnalysisCmdEscaped);
         final FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
-
         final String contents = scriptContentStart + "\n"
                 + bootstrapCmd + "\n"
-                + ticsAnalysisCmdEscaped;
+                + ticsAnalysisCmdCleaned;
 
         createTempFile.write(contents, "UTF-8");
 
         return createTempFile;
+    }
+
+    private String cleanTicsAnalysisCmd(final String escapedCmd) {
+        final Pattern pattern = Pattern.compile("calc \"\\S+\"");
+        final Matcher matcher = pattern.matcher(escapedCmd);
+        String cleanCmd = escapedCmd;
+
+        while (matcher.find()) {
+            final String group = matcher.group().replaceAll("\"", "");
+            cleanCmd = cleanCmd.replaceFirst("calc \"\\S+\"", group);
+        }
+
+        return cleanCmd;
     }
 
     private String getInstallTicsApiUrl(final String tiobewebBaseUrl, final String os) throws URISyntaxException {
