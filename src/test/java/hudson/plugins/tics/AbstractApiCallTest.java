@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 
@@ -25,11 +26,7 @@ public class AbstractApiCallTest {
     }
 
     private List<Pattern> getPatterns(final List<String> regexes) {
-        final List<Pattern> noProxyPatterns = new ArrayList<>();
-        for (final String pattern: regexes) {
-            noProxyPatterns.add(Pattern.compile(pattern));
-        }
-        return noProxyPatterns;
+        return regexes.stream().map(Pattern::compile).collect(Collectors.toList());
     }
 
     private List<NoProxyTestCase> getNoProxyTestCases() {
