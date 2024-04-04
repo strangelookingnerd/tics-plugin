@@ -233,9 +233,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         final String scriptSuffix =  isLinux ? ".sh" : ".ps1";
         final String scriptContentStart = isLinux ? "#!/bin/bash" : "";
-        final String ticsAnalysisCmdEscaped = isLinux
-                ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "))
-                : getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd);
+        final String ticsAnalysisCmdEscaped = getTicsAnalysisCmdEscaped(ticsAnalysisCmd, isLinux);
 
         final FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
 
@@ -248,7 +246,17 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return createTempFile;
     }
 
-    protected String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
+    protected String getTicsAnalysisCmdEscaped(final ArgumentListBuilder ticsAnalysisCmd, final boolean isLinux) {
+        return isLinux
+                ? getTicsAnalysisCmdEscapedLinux(ticsAnalysisCmd)
+                : getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd);
+    }
+
+    private String getTicsAnalysisCmdEscapedLinux(final ArgumentListBuilder ticsAnalysisCmd) {
+        return ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "));
+    }
+
+    private String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
         return removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd.toWindowsCommand().toString());
     }
 
