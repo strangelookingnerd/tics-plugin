@@ -11,15 +11,17 @@ import java.util.stream.Collectors;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+
 public class AbstractApiCallTest {
 
     private class NoProxyTestCase {
-        public List<Pattern> noProxyPatterns;
+        public ImmutableList<Pattern> noProxyPatterns;
         public String targetUrl;
         public boolean expectedResult;
 
         public NoProxyTestCase(final List<Pattern> noProxyPatterns, final String targetUrl, final boolean expectedResult) {
-            this.noProxyPatterns = noProxyPatterns;
+            this.noProxyPatterns = ImmutableList.copyOf(noProxyPatterns);
             this.targetUrl = targetUrl;
             this.expectedResult = expectedResult;
         }

@@ -4,7 +4,6 @@ import java.io.PrintStream;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,7 +72,6 @@ public abstract class AbstractApiCall {
             if (proxy != null) {
                 final String proxyName = proxy.getName();
                 final int proxyPort = proxy.getPort();
-//                final List<Pattern> noProxyPatterns = proxy.getNoProxyHostPatterns();
                 final ImmutableList<Pattern> noProxyPatterns = ImmutableList.copyOf(proxy.getNoProxyHostPatterns());
                 final String proxyUser = proxy.getUserName();
                 final String proxyPass = Secret.toString(proxy.getSecretPassword());
@@ -100,7 +98,7 @@ public abstract class AbstractApiCall {
     }
 
 
-    protected boolean isProxyExempted(final String urlStr, final List<Pattern> noProxyPatterns) {
+    protected boolean isProxyExempted(final String urlStr, final ImmutableList<Pattern> noProxyPatterns) {
         Matcher matcher;
         // Bypassing proxy for internal addresses by default
         for (final Pattern p : Iterables.concat(noProxyPatterns, LOCALHOST_PATTERNS)) {
