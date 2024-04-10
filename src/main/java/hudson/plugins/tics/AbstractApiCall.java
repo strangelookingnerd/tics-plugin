@@ -4,7 +4,6 @@ import java.io.PrintStream;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,6 +22,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.gson.Gson;
 
 import hudson.ProxyConfiguration;
@@ -36,6 +37,7 @@ public abstract class AbstractApiCall {
     private final Optional<Pair<String, String>> credentials;
     private final String apiCallPrefix;
     private final String url;
+    public static final ImmutableList<Pattern> LOCALHOST_PATTERNS = ImmutableList.of(Pattern.compile("localhost"), Pattern.compile("127\\..*"));
 
 
     public AbstractApiCall(final String apiCallName, final PrintStream logger, final Optional<Pair<String, String>> credentials, final String url) {
@@ -70,10 +72,7 @@ public abstract class AbstractApiCall {
             if (proxy != null) {
                 final String proxyName = proxy.getName();
                 final int proxyPort = proxy.getPort();
-                final List<Pattern> noProxyPatterns = proxy.getNoProxyHostPatterns();
-                // Bypassing proxy for internal hosts by default
-                noProxyPatterns.add(Pattern.compile("localhost"));
-                noProxyPatterns.add(Pattern.compile("127\\..*"));
+                final ImmutableList<Pattern> noProxyPatterns = ImmutableList.copyOf(proxy.getNoProxyHostPatterns());
                 final String proxyUser = proxy.getUserName();
                 final String proxyPass = Secret.toString(proxy.getSecretPassword());
 
@@ -99,9 +98,10 @@ public abstract class AbstractApiCall {
     }
 
 
-    protected boolean isProxyExempted(final String urlStr, final List<Pattern> noProxyPatterns) {
+    protected boolean isProxyExempted(final String urlStr, final ImmutableList<Pattern> noProxyPatterns) {
         Matcher matcher;
-        for (final Pattern p : noProxyPatterns) {
+        // Bypassing proxy for internal addresses by default
+        for (final Pattern p : Iterables.concat(noProxyPatterns, LOCALHOST_PATTERNS)) {
             matcher = p.matcher(urlStr);
             if(matcher.find()) {
                 return true;

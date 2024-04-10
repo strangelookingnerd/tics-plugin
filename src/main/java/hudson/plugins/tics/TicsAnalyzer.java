@@ -156,10 +156,12 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return path + command;
     }
 
+
     int launchTicsQServer(final String url, final Run<?, ?> run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
 
         final String bootstrapCommand =  installTics ? getBootstrapCmd(url, launcher) : "";
-        final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, launcher);
+        final boolean isLauncherUnix = launcher.isUnix();
+        final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, isLauncherUnix);
 
         final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
         final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher))
@@ -173,9 +175,10 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return exitCode;
     }
 
-    private ArgumentListBuilder getTicsQServerArgs(final EnvVars buildEnv, final Launcher launcher) {
+
+    protected ArgumentListBuilder getTicsQServerArgs(final EnvVars buildEnv, final boolean isLauncherUnix) {
         final ArgumentListBuilder args = new ArgumentListBuilder();
-        final String ticsQServer = "TICSQServer" + (launcher.isUnix() ? "" : ".exe");
+        final String ticsQServer = "TICSQServer" + (isLauncherUnix ? "" : ".exe");
 
         args.add(getFullyQualifiedPath(ticsQServer));
 
@@ -230,9 +233,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
         final String scriptSuffix =  isLinux ? ".sh" : ".ps1";
         final String scriptContentStart = isLinux ? "#!/bin/bash" : "";
-        final String ticsAnalysisCmdEscaped = isLinux
-                ? ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "))
-                : ticsAnalysisCmd.toWindowsCommand().toString();
+        final String ticsAnalysisCmdEscaped = getTicsAnalysisCmdEscaped(ticsAnalysisCmd, isLinux);
 
         final FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
 
@@ -243,6 +244,27 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         createTempFile.write(contents, "UTF-8");
 
         return createTempFile;
+    }
+
+    protected String getTicsAnalysisCmdEscaped(final ArgumentListBuilder ticsAnalysisCmd, final boolean isLinux) {
+        return isLinux
+                ? getTicsAnalysisCmdEscapedLinux(ticsAnalysisCmd)
+                : getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd);
+    }
+
+    private String getTicsAnalysisCmdEscapedLinux(final ArgumentListBuilder ticsAnalysisCmd) {
+        return ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "));
+    }
+
+    private String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
+        return removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd.toWindowsCommand().toString());
+    }
+
+    protected String removeDoubleQuoteFromCommand(final String flag, final String cmd) {
+        // Trim double quotes for metric(s) argument after the -calc/-recalc flag, e.g. -calc "CODINGSTANDARD".
+        // These double quotes are added during ticsAnalysisCmd.toWindowsCommand().toString() operation.
+        // This will cause issue during the execution of the created powershell script (#33818-1)
+        return cmd.replaceAll(flag + " \"(\\S+)\"", flag + " $1" );
     }
 
     private String getInstallTicsApiUrl(final String tiobewebBaseUrl, final String os) throws URISyntaxException {
