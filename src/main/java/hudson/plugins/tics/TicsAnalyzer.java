@@ -67,8 +67,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
     /**
      * This annotation tells Hudson to call this constructor, with values from the configuration form page with matching parameter names.
-     * See https://wiki.jenkins-ci.org/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins for explanation of DataBoundConstructor
-     *
+     * See <a href="https://wiki.jenkins-ci.org/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins">...</a> for explanation of DataBoundConstructor
      * DO NOT RENAME THESE PARAMETERS, as they are serialized (by Jenkins) in jobs/[PROJECT]/config.xml
      */
     @DataBoundConstructor
@@ -109,7 +108,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         try {
             final EnvVars buildEnv = run.getEnvironment(listener);
             String installTicsApiFullUrl = "";
-            int exitCode;
+            final int exitCode;
 
             if (installTics) {
                 final String tiobeWebBaseUrl;
@@ -146,7 +145,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     /** Prefixes given command with location of TICS, if available */
     private String getFullyQualifiedPath(final String command) {
         String path = MoreObjects.firstNonNull(ticsPath, "").trim();
-        if ("".equals(path) || installTics) {
+        if (path.isEmpty() || installTics) {
             return command;
         }
         // Note: we do not use new File(), because we do not want use the local FileSystem
@@ -212,9 +211,9 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     private String getBootstrapCmd(final String url, final Launcher launcher) {
         final boolean isLinux = launcher.isUnix();
         if (isLinux) {
-            return ". <(curl --silent --show-error \'" + url + "\' )";
+            return ". <(curl --silent --show-error '" + url + "' )";
         } else {
-            return "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))";
+            return "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))";
         }
     }
 
@@ -224,7 +223,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         if (isLinux) {
             return "bash " + file;
         } else {
-            return "powershell -NoProfile -ExecutionPolicy Bypass -Command \" & '" + file +  "'\"";
+            return "powershell -NoProfile -Command \" & '" + file +  "'\"";
         }
     }
 
@@ -253,7 +252,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     private String getTicsAnalysisCmdEscapedLinux(final ArgumentListBuilder ticsAnalysisCmd) {
-        return ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "));
+        return ticsAnalysisCmd.toList().stream().map(StringEscapeUtils::escapeXSI).collect(Collectors.joining(" "));
     }
 
     private String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
@@ -279,7 +278,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     private static boolean isNotEmpty(final String arg) {
-        return !"".equals(Strings.nullToEmpty(arg).trim());
+        return !Strings.nullToEmpty(arg).trim().isEmpty();
     }
 
     void addMetrics(final ArgumentListBuilder args, final String key, final Metrics metrics) {
@@ -333,7 +332,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @Override
-        public boolean configure(final StaplerRequest staplerRequest, final JSONObject json) throws FormException {
+        public boolean configure(final StaplerRequest staplerRequest, final JSONObject json) {
             save();
             return true; // indicate that everything is good so far
         }
@@ -350,7 +349,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if ("".equals(Strings.nullToEmpty(value).trim())) {
+            if (Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a project name");
             }
             return FormValidation.ok();
@@ -363,7 +362,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if ("".equals(Strings.nullToEmpty(value).trim())) {
+            if (Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a branch name");
             }
             return FormValidation.ok();
@@ -376,7 +375,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if (createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
+            if (createTmpdir && Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a directory");
             }
             return FormValidation.ok();
@@ -430,7 +429,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             try {
                 new URL(url).toURI();
                 return true;
-            } catch (MalformedURLException | URISyntaxException e) {
+            } catch (final MalformedURLException | URISyntaxException e) {
                 return false;
             }
         }
