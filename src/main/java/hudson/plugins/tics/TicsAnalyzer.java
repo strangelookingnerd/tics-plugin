@@ -32,7 +32,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
-import hudson.Proc;
 import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
@@ -67,8 +66,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
 
     /**
      * This annotation tells Hudson to call this constructor, with values from the configuration form page with matching parameter names.
-     * See https://wiki.jenkins-ci.org/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins for explanation of DataBoundConstructor
-     *
+     * See <a href="https://wiki.jenkins-ci.org/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins">...</a> for explanation of DataBoundConstructor
      * DO NOT RENAME THESE PARAMETERS, as they are serialized (by Jenkins) in jobs/[PROJECT]/config.xml
      */
     @DataBoundConstructor
@@ -109,7 +107,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         try {
             final EnvVars buildEnv = run.getEnvironment(listener);
             String installTicsApiFullUrl = "";
-            int exitCode;
+            final int exitCode;
 
             if (installTics) {
                 final String tiobeWebBaseUrl;
@@ -132,7 +130,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
                 installTicsApiFullUrl = tiobeWebBaseUrl + installTicsApiData;
             }
 
-            exitCode = launchTicsQServer(installTicsApiFullUrl, run, launcher, listener, buildEnv, workspace);
+            exitCode = launchTicsQServer(installTicsApiFullUrl, run, launcher, listener, buildEnv);
             if (exitCode != 0) {
                 logger.println(LOGGING_PREFIX + "Exit code " + exitCode);
                 throw new RuntimeException(LOGGING_PREFIX + errorPrefix + exitCode);
@@ -146,7 +144,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     /** Prefixes given command with location of TICS, if available */
     private String getFullyQualifiedPath(final String command) {
         String path = MoreObjects.firstNonNull(ticsPath, "").trim();
-        if ("".equals(path) || installTics) {
+        if (path.isEmpty() || installTics) {
             return command;
         }
         // Note: we do not use new File(), because we do not want use the local FileSystem
@@ -157,22 +155,17 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
 
-    int launchTicsQServer(final String url, final Run<?, ?> run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv, final FilePath workspace) throws IOException, InterruptedException {
-
-        final String bootstrapCommand =  installTics ? getBootstrapCmd(url, launcher) : "";
+    int launchTicsQServer(final String url, final Run<?, ?> run, final Launcher launcher, final TaskListener listener, final EnvVars buildEnv) throws IOException, InterruptedException {
         final boolean isLauncherUnix = launcher.isUnix();
+
+        final String bootstrapCommand =  installTics ? getBootstrapCmd(url, isLauncherUnix) : "";
         final ArgumentListBuilder ticsAnalysisCommand = getTicsQServerArgs(buildEnv, isLauncherUnix);
 
-        final FilePath scriptPath = createScript(workspace, bootstrapCommand, ticsAnalysisCommand, launcher);
-        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(runScript(scriptPath.getRemote(), launcher))
+        final String command = createCommand(bootstrapCommand, ticsAnalysisCommand, isLauncherUnix);
+        final ProcStarter starter = launcher.new ProcStarter().stdout(listener).cmdAsSingleString(command)
                 .envs(getEnvMap(buildEnv, run));
 
-        final Proc proc = launcher.launch(starter);
-        final int exitCode = proc.join();
-
-        scriptPath.delete();
-
-        return exitCode;
+        return launcher.launch(starter).join();
     }
 
 
@@ -209,55 +202,32 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         return args;
     }
 
-    private String getBootstrapCmd(final String url, final Launcher launcher) {
-        final boolean isLinux = launcher.isUnix();
+    protected String getBootstrapCmd(final String url, final boolean isLinux) {
         if (isLinux) {
-            return ". <(curl --silent --show-error \'" + url + "\' )";
+            return ". <(curl --silent --show-error '" + url + "')";
         } else {
-            return "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))";
+            return "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('" + url + "'))";
         }
     }
 
-    private String runScript(final String file, final Launcher launcher) {
-        final boolean isLinux = launcher.isUnix();
-
+    protected String createCommand(final String bootstrapCmd, final ArgumentListBuilder ticsAnalysisCmd, final boolean isLinux) {
+        final String command;
         if (isLinux) {
-            return "bash " + file;
+            final String bootstrap = bootstrapCmd.isEmpty() ? "" : bootstrapCmd + " &&";
+            command  = "bash -c \"" + bootstrap +  " " + getTicsAnalysisCmdEscapedLinux(ticsAnalysisCmd) + "\"";
         } else {
-            return "powershell -NoProfile -ExecutionPolicy Bypass -Command \" & '" + file +  "'\"";
+            final String bootstrap = bootstrapCmd.isEmpty() ? "" : bootstrapCmd;
+            command = "powershell \"" + bootstrap + "; if ($?) { " + getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd) + " }\"";
         }
+        return command;
     }
 
-    private FilePath createScript(final FilePath workspace, final String bootstrapCmd, final ArgumentListBuilder ticsAnalysisCmd, final Launcher launcher) throws IOException, InterruptedException {
-        final boolean isLinux = launcher.isUnix();
-
-        final String scriptSuffix =  isLinux ? ".sh" : ".ps1";
-        final String scriptContentStart = isLinux ? "#!/bin/bash" : "";
-        final String ticsAnalysisCmdEscaped = getTicsAnalysisCmdEscaped(ticsAnalysisCmd, isLinux);
-
-        final FilePath createTempFile = workspace.createTempFile("tics", scriptSuffix);
-
-        final String contents = scriptContentStart + "\n"
-                + bootstrapCmd + "\n"
-                + ticsAnalysisCmdEscaped;
-
-        createTempFile.write(contents, "UTF-8");
-
-        return createTempFile;
+    protected String getTicsAnalysisCmdEscapedLinux(final ArgumentListBuilder ticsAnalysisCmd) {
+        return ticsAnalysisCmd.toList().stream().map(StringEscapeUtils::escapeXSI).collect(Collectors.joining(" "));
     }
 
-    protected String getTicsAnalysisCmdEscaped(final ArgumentListBuilder ticsAnalysisCmd, final boolean isLinux) {
-        return isLinux
-                ? getTicsAnalysisCmdEscapedLinux(ticsAnalysisCmd)
-                : getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd);
-    }
-
-    private String getTicsAnalysisCmdEscapedLinux(final ArgumentListBuilder ticsAnalysisCmd) {
-        return ticsAnalysisCmd.toList().stream().map(a -> StringEscapeUtils.escapeXSI(a)).collect(Collectors.joining(" "));
-    }
-
-    private String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
-        return removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd.toWindowsCommand().toString());
+    protected String getTicsAnalysisCmdEscapedWin(final ArgumentListBuilder ticsAnalysisCmd) {
+        return removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd.toString());
     }
 
     protected String removeDoubleQuoteFromCommand(final String flag, final String cmd) {
@@ -279,7 +249,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
     }
 
     private static boolean isNotEmpty(final String arg) {
-        return !"".equals(Strings.nullToEmpty(arg).trim());
+        return !Strings.nullToEmpty(arg).trim().isEmpty();
     }
 
     void addMetrics(final ArgumentListBuilder args, final String key, final Metrics metrics) {
@@ -333,7 +303,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
         }
 
         @Override
-        public boolean configure(final StaplerRequest staplerRequest, final JSONObject json) throws FormException {
+        public boolean configure(final StaplerRequest staplerRequest, final JSONObject json) {
             save();
             return true; // indicate that everything is good so far
         }
@@ -350,7 +320,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if ("".equals(Strings.nullToEmpty(value).trim())) {
+            if (Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a project name");
             }
             return FormValidation.ok();
@@ -363,7 +333,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if ("".equals(Strings.nullToEmpty(value).trim())) {
+            if (Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a branch name");
             }
             return FormValidation.ok();
@@ -376,7 +346,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             }
             item.checkPermission(Item.CONFIGURE);
 
-            if (createTmpdir && "".equals(Strings.nullToEmpty(value).trim())) {
+            if (createTmpdir && Strings.nullToEmpty(value).trim().isEmpty()) {
                 return FormValidation.error("Please provide a directory");
             }
             return FormValidation.ok();
@@ -430,7 +400,7 @@ public class TicsAnalyzer extends Builder implements SimpleBuildStep {
             try {
                 new URL(url).toURI();
                 return true;
-            } catch (MalformedURLException | URISyntaxException e) {
+            } catch (final MalformedURLException | URISyntaxException e) {
                 return false;
             }
         }

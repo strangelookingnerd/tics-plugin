@@ -79,11 +79,11 @@ public class TicsAnalyzerTest {
         Windows,
     }
 
-    private class TicsArguments {
-        public String projectName = "";
-        public String branchName = "";
-        public String branchDirectory = "";
-        public String tmpdir = "";
+    private static class TicsArguments {
+        public String projectName;
+        public String branchName;
+        public String branchDirectory;
+        public String tmpdir;
 
         public TicsArguments(final String projectName, final String branchName, final String branchDirectory, final String tmpdir) {
             this.projectName = projectName;
@@ -93,7 +93,7 @@ public class TicsAnalyzerTest {
         }
     }
 
-    private class TicsAnalyzerCmdTestCase {
+    private static class TicsAnalyzerCmdTestCase {
         public TicsAnalyzer analyzer;
         public Platform platform;
         public String expectedResult;
@@ -114,51 +114,51 @@ public class TicsAnalyzerTest {
 
         // Calc and Recalc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, true, true, false), windowsArgs),
-            Platform.Windows,
-            "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE && exit %%ERRORLEVEL%%\""
-            ));
+                Platform.Windows,
+                "TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
+        ));
 
         // Only Calc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, false, false, false), windowsArgs),
-            Platform.Windows,
-            "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC && exit %%ERRORLEVEL%%\""
-            ));
+                Platform.Windows,
+                "TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC"
+        ));
 
         // Only Recalc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(false, false, false, false), getMetrics(false, true, true, false), windowsArgs),
-            Platform.Windows,
-            "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -recalc COMPILERWARNING,FINALIZE && exit %%ERRORLEVEL%%\""
-            ));
+                Platform.Windows,
+                "TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -recalc COMPILERWARNING,FINALIZE"
+        ));
 
         // No branch and no tmpdir
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, true, true, false), noBranchAndTmpdirArgs),
-            Platform.Windows,
-            "cmd.exe /C \"TICSQServer.exe -project cpp-game -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE && exit %%ERRORLEVEL%%\""
-            ));
+                Platform.Windows,
+                "TICSQServer.exe -project cpp-game -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
+        ));
 
         // Calc and Recalc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, true, true, false), linuxArgs),
-            Platform.Linux,
-            "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
-            ));
+                Platform.Linux,
+                "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
+        ));
 
         // Only Calc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, false, false, false), linuxArgs),
-            Platform.Linux,
-            "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -calc CODINGSTANDARD,LOC"
-            ));
+                Platform.Linux,
+                "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -calc CODINGSTANDARD,LOC"
+        ));
 
         // Only Recalc
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(false, false, false, false), getMetrics(false, true, true, false), linuxArgs),
-            Platform.Linux,
-            "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -recalc COMPILERWARNING,FINALIZE"
-            ));
+                Platform.Linux,
+                "TICSQServer -project game-gcc -branchname master -branchdir /home/leila/development/dev-test/projects/game-gcc -tmpdir /home/leila/development/dev-test/tmp/33733-tmpdir -recalc COMPILERWARNING,FINALIZE"
+        ));
 
         // No branch and no tmpdir
         testCases.add(new TicsAnalyzerCmdTestCase(getTicsAnalyzer(getMetrics(true, false, false, true), getMetrics(false, true, true, false), noBranchAndTmpdirArgs),
-            Platform.Linux,
-            "TICSQServer -project cpp-game -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
-            ));
+                Platform.Linux,
+                "TICSQServer -project cpp-game -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE"
+        ));
 
 
         return testCases;
@@ -171,9 +171,54 @@ public class TicsAnalyzerTest {
         for (final TicsAnalyzerCmdTestCase testCase : getTicsAnalysisCmdEscapedTestCases()) {
             final boolean isLauncherUnix = testCase.platform == Platform.Linux;
             final ArgumentListBuilder ticsAnalysisCmd = testCase.analyzer.getTicsQServerArgs(buildEnv, isLauncherUnix);
-            final String ticsAnalysisCmdEscaped = testCase.analyzer.getTicsAnalysisCmdEscaped(ticsAnalysisCmd, isLauncherUnix);
+
+            final String ticsAnalysisCmdEscaped;
+            if (isLauncherUnix) {
+                ticsAnalysisCmdEscaped = testCase.analyzer.getTicsAnalysisCmdEscapedLinux(ticsAnalysisCmd);
+            } else {
+                ticsAnalysisCmdEscaped = testCase.analyzer.getTicsAnalysisCmdEscapedWin(ticsAnalysisCmd);
+            }
+
             assertEquals(testCase.expectedResult, ticsAnalysisCmdEscaped);
         }
+    }
+
+    @Test
+    public void testCreateCommandLinux() {
+        final EnvVars buildEnv = new EnvVars();
+
+        final TicsAnalyzer analyzer = getTicsAnalyzer(
+                getMetrics(true, false, false, true),
+                getMetrics(false, true, true, false),
+                new TicsArguments("cpp-game", "main", ".", ""));
+
+        final ArgumentListBuilder args = analyzer.getTicsQServerArgs(buildEnv, true);
+        final String bootstrapCmd = analyzer.getBootstrapCmd(analyzer.ticsConfiguration, true);
+
+        final String commandWithBootstrap = analyzer.createCommand(bootstrapCmd, args, true);
+        assertEquals("bash -c \". <(curl --silent --show-error 'http://192.168.1.204:42506/tiobeweb/TICS/api/cfg?name=default') && TICSQServer -project cpp-game -branchname main -branchdir . -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE\"", commandWithBootstrap);
+
+        final String commandNoBootstrap = analyzer.createCommand("", args, true);
+        assertEquals("bash -c \" TICSQServer -project cpp-game -branchname main -branchdir . -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE\"", commandNoBootstrap);
+    }
+
+    @Test
+    public void testCreateCommandWindows() {
+        final EnvVars buildEnv = new EnvVars();
+
+        final TicsAnalyzer analyzer = getTicsAnalyzer(
+                getMetrics(true, false, false, true),
+                getMetrics(false, true, true, false),
+                new TicsArguments("cpp-game", "main", ".", ""));
+
+        final ArgumentListBuilder args = analyzer.getTicsQServerArgs(buildEnv, false);
+        final String bootstrapCmd = analyzer.getBootstrapCmd(analyzer.ticsConfiguration, false);
+
+        final String commandWithBootstrap = analyzer.createCommand(bootstrapCmd, args, false);
+        assertEquals("powershell \"[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('http://192.168.1.204:42506/tiobeweb/TICS/api/cfg?name=default')); if ($?) { TICSQServer.exe -project cpp-game -branchname main -branchdir . -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE }\"", commandWithBootstrap);
+
+        final String commandNoBootstrap = analyzer.createCommand("", args, false);
+        assertEquals("powershell \"; if ($?) { TICSQServer.exe -project cpp-game -branchname main -branchdir . -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE }\"", commandNoBootstrap);
     }
 
     @Test
@@ -181,16 +226,16 @@ public class TicsAnalyzerTest {
         String ticsAnalysisCmd;
         String ticsAnalysisCmdExpected;
         final TicsAnalyzer ta = getTicsAnalyzer(null, null, new TicsArguments("", "", "", ""));
-        ticsAnalysisCmd = "cmd.exe /C \"TICSQServer.exe -project game-gcc -branchname master -branchdir D:\\Development\\dev_test\\workspace\\tics-test-33733-UI -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc \"CODINGSTANDARD,LOC\" && exit %%ERRORLEVEL%%\"";
-        ticsAnalysisCmdExpected = "cmd.exe /C \"TICSQServer.exe -project game-gcc -branchname master -branchdir D:\\Development\\dev_test\\workspace\\tics-test-33733-UI -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC && exit %%ERRORLEVEL%%\"";
+        ticsAnalysisCmd = "TICSQServer.exe -project game-gcc -branchname master -branchdir D:\\Development\\dev_test\\workspace\\tics-test-33733-UI -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc \"CODINGSTANDARD,LOC\"";
+        ticsAnalysisCmdExpected = "TICSQServer.exe -project game-gcc -branchname master -branchdir D:\\Development\\dev_test\\workspace\\tics-test-33733-UI -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC";
         assertEquals(ticsAnalysisCmdExpected, ta.removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd));
 
-        ticsAnalysisCmd = "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc \"CODINGSTANDARD,LOC\" -recalc \"COMPILERWARNING,FINALIZE\" && exit %%ERRORLEVEL%%\"";
-        ticsAnalysisCmdExpected = "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE && exit %%ERRORLEVEL%%\"";
+        ticsAnalysisCmd = "TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc \"CODINGSTANDARD,LOC\" -recalc \"COMPILERWARNING,FINALIZE\"";
+        ticsAnalysisCmdExpected = "TICSQServer.exe -project cpp-game-vs -branchname master -branchdir D:\\Development\\dev_test\\projects\\cpp-game-vs -tmpdir D:\\Development\\dev_test\\tmp\\33733-tmpdir -calc CODINGSTANDARD,LOC -recalc COMPILERWARNING,FINALIZE";
         assertEquals(ticsAnalysisCmdExpected, ta.removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd));
 
-        ticsAnalysisCmd = "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -calc \"BEGIN,CODINGSTANDARD,LOC,ABSTRACTINTERPRETATION,SECURITY\" -recalc \"FINALIZE\" && exit %%ERRORLEVEL%%\"";
-        ticsAnalysisCmdExpected = "cmd.exe /C \"TICSQServer.exe -project cpp-game-vs -calc BEGIN,CODINGSTANDARD,LOC,ABSTRACTINTERPRETATION,SECURITY -recalc FINALIZE && exit %%ERRORLEVEL%%\"";
+        ticsAnalysisCmd = "TICSQServer.exe -project cpp-game-vs -calc \"BEGIN,CODINGSTANDARD,LOC,ABSTRACTINTERPRETATION,SECURITY\" -recalc \"FINALIZE\"";
+        ticsAnalysisCmdExpected = "TICSQServer.exe -project cpp-game-vs -calc BEGIN,CODINGSTANDARD,LOC,ABSTRACTINTERPRETATION,SECURITY -recalc FINALIZE";
         assertEquals(ticsAnalysisCmdExpected, ta.removeDoubleQuoteFromCommand("calc", ticsAnalysisCmd));
     }
 }
