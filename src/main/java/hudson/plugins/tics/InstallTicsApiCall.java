@@ -29,12 +29,11 @@ public class InstallTicsApiCall extends AbstractApiCall {
     }
 
     public String retrieveInstallTics() {
-        final String url = this.installTicsUrl;
-        final String response = this.performHttpRequest(url);
+        final String response = this.performHttpRequest(this.installTicsUrl);
 
         final InstallTicsApiResponse resp = new Gson().fromJson(response, InstallTicsApiResponse.class);
 
-        if (resp.links == null || Strings.isNullOrEmpty(resp.links.installTics)) {
+        if (Strings.isNullOrEmpty(resp.links.installTics)) {
             throw new IllegalArgumentException(LOGGING_PREFIX + "Cannot determine Install TICS API url.");
         }
 
@@ -44,12 +43,12 @@ public class InstallTicsApiCall extends AbstractApiCall {
     private String performHttpRequest(final String url) {
         final HttpGet httpGet = new HttpGet(url);
         try (final CloseableHttpClient httpclient = this.createHttpClient();
-                final CloseableHttpResponse response = httpclient.execute(httpGet);) {
+                final CloseableHttpResponse response = httpclient.execute(httpGet)) {
             final String body = EntityUtils.toString(response.getEntity());
 
             this.throwIfStatusNotOk(response, body);
             return body;
-        } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException ex) {
+        } catch (final KeyManagementException | NoSuchAlgorithmException | KeyStoreException | IOException | MeasureApiCallException ex) {
             throw new RuntimeException("Error while performing API request to " + url, ex);
         }
     }
