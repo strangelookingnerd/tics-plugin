@@ -13,7 +13,9 @@
     <packaging>hpi</packaging>
     <version>2024.1.1.2-SNAPSHOT</version>
     <properties>
-        <jenkins.version>2.289.1</jenkins.version>
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+        <jenkins.baseline>2.289</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
         <java.level>8</java.level>
 
         <!-- http://docs.codehaus.org/display/MAVENUSER/POM+Element+for+Source+File+Encoding -->
@@ -78,7 +80,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.164.x</artifactId>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
                 <version>10</version>
                 <scope>import</scope>
                 <type>pom</type>
