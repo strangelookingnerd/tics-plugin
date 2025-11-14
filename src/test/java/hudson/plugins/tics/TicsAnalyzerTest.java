@@ -26,7 +26,7 @@ class TicsAnalyzerTest {
             final Metrics recalcMetrics,
             final TicsArguments ticsArgs
     ) {
-        return new TicsAnalyzer(ticsPath
+        return new TicsAnalyzer(TICS_PATH
                 , TICS_CONFIGURATION
                 , ticsArgs.projectName
                 , ticsArgs.branchName
@@ -239,7 +239,7 @@ class TicsAnalyzerTest {
             String extraArguments) {
     }
 
-    private static Stream<Arguments> parameters() {
+    static Stream<Arguments> parameters() {
         final TicsArguments windowsArgs = new TicsArguments("cpp game", "master branch", "D:\\Development\\dev_test\\projects\\cpp game", "D:\\Development\\dev_test\\tmp\\33733-tmpdir", "");
         final TicsArguments linuxArgs = new TicsArguments("cpp game", "master branch", "/home/leila/development/dev-test/projects/cpp game", "/home/leila/development/dev-test/tmp/33733-tmpdir", "");
         final TicsArguments noBranchAndTmpdirArgs = new TicsArguments("cpp-game", "", "", "", "");
